@@ -1,25 +1,126 @@
+# import pandas as pd
+# from models.response_model import DataQuality
+
+
+# def profile_dataset(df: pd.DataFrame) -> DataQuality:
+#     """
+#     Compute data quality metrics:
+#     - Missing value count and % per column
+#     - Duplicate row count
+#     """
+#     total_rows = len(df)
+
+#     missing_values: dict[str, int] = {}
+#     missing_percent: dict[str, float] = {}
+
+#     for col in df.columns:
+#         n_missing = int(df[col].isna().sum())
+#         if n_missing > 0:
+#             missing_values[col] = n_missing
+#             missing_percent[col] = round((n_missing / total_rows) * 100, 2)
+
+#     duplicate_rows = int(df.duplicated().sum())
+
+#     return DataQuality(
+#         missing_values=missing_values,
+#         missing_percent=missing_percent,
+#         duplicate_rows=duplicate_rows,
+#         total_rows=total_rows,
+#     )
+
+
+# def get_basic_stats(df: pd.DataFrame) -> dict:
+#     """
+#     Compute summary stats for numeric columns only.
+#     Used as context for the AI agent prompt.
+#     """
+#     numeric_cols = df.select_dtypes(include="number")
+#     if numeric_cols.empty:
+#         return {}
+
+#     stats = numeric_cols.describe().round(2).to_dict()
+#     return stats
+
+
 import pandas as pd
+import numpy as np
 from models.response_model import DataQuality
+
+# All the disguised null values seen in real datasets
+EXTENDED_NULL_VALUES = {
+    # String nulls
+    "", " ", "  ",
+    "nan", "NaN", "NAN",
+    "null", "NULL", "Null",
+    "none", "None", "NONE",
+    "na", "NA", "N/A", "n/a", "N/a",
+    "nil", "NIL", "Nil",
+    # Common placeholders
+    "-", "--", "---",
+    "?", "??",
+    "missing", "Missing", "MISSING",
+    "unknown", "Unknown", "UNKNOWN",
+    "undefined", "Undefined",
+    "not available", "Not Available",
+    "not applicable", "Not Applicable",
+    # Numeric sentinels
+    "999", "9999", "-999", "-9999",
+    "99", "-1", "0",
+}
+
+NUMERIC_SENTINEL_VALUES = {999, 9999, -999, -9999, -1}
+
+
+def normalize_nulls(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Replace all disguised null values with real NaN
+    so that isna() catches everything.
+    """
+    # Step 1 — replace known string nulls in object columns
+    df = df.copy()
+    for col in df.select_dtypes(include="object").columns:
+        # strip whitespace first, then check against null set
+        df[col] = df[col].apply(
+            lambda x: np.nan
+            if isinstance(x, str) and x.strip().lower() in {
+                v.lower() for v in EXTENDED_NULL_VALUES
+            }
+            else x
+        )
+
+    # Step 2 — replace numeric sentinel values in numeric columns
+    for col in df.select_dtypes(include="number").columns:
+        sentinel_count = df[col].isin(NUMERIC_SENTINEL_VALUES).sum()
+        # Only replace if sentinels make up less than 50% of values
+        # (avoids replacing a column where -1 is a real value)
+        if 0 < sentinel_count < len(df[col]) * 0.5:
+            df[col] = df[col].replace(
+                list(NUMERIC_SENTINEL_VALUES), np.nan
+            )
+
+    return df
 
 
 def profile_dataset(df: pd.DataFrame) -> DataQuality:
     """
-    Compute data quality metrics:
-    - Missing value count and % per column
-    - Duplicate row count
+    Profile data quality AFTER normalizing disguised nulls.
     """
-    total_rows = len(df)
+    # Normalize first — catch all types of null
+    df_clean = normalize_nulls(df)
 
+    total_rows = len(df_clean)
     missing_values: dict[str, int] = {}
     missing_percent: dict[str, float] = {}
 
-    for col in df.columns:
-        n_missing = int(df[col].isna().sum())
+    for col in df_clean.columns:
+        n_missing = int(df_clean[col].isna().sum())
         if n_missing > 0:
             missing_values[col] = n_missing
-            missing_percent[col] = round((n_missing / total_rows) * 100, 2)
+            missing_percent[col] = round(
+                (n_missing / total_rows) * 100, 2
+            )
 
-    duplicate_rows = int(df.duplicated().sum())
+    duplicate_rows = int(df_clean.duplicated().sum())
 
     return DataQuality(
         missing_values=missing_values,
@@ -30,16 +131,20 @@ def profile_dataset(df: pd.DataFrame) -> DataQuality:
 
 
 def get_basic_stats(df: pd.DataFrame) -> dict:
-    """
-    Compute summary stats for numeric columns only.
-    Used as context for the AI agent prompt.
-    """
-    numeric_cols = df.select_dtypes(include="number")
+    """Stats after null normalization."""
+    df_clean = normalize_nulls(df)
+    numeric_cols = df_clean.select_dtypes(include="number")
     if numeric_cols.empty:
         return {}
+    return numeric_cols.describe().round(2).to_dict()
 
-    stats = numeric_cols.describe().round(2).to_dict()
-    return stats
+
+
+
+
+
+
+
 
 
 

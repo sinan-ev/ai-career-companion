@@ -49,10 +49,19 @@ async def run_pipeline(file: UploadFile) -> AnalysisResponse:
 
     # ── Stage 6: Column Intelligence ───────────────────────────
     # Build sample values dict for AI context (5 values per column)
+    # sample_values = {
+    #     col: df[col].dropna().head(5).tolist()
+    #     for col in df.columns
+    # }
+    from services.profiler import normalize_nulls
+
+    df_normalized = normalize_nulls(df)
+
     sample_values = {
-        col: df[col].dropna().head(5).tolist()
-        for col in df.columns
-    }
+        col: df_normalized[col].dropna().head(5).tolist()
+        for col in df_normalized.columns
+}
+
 
     column_meanings = explain_columns(
         columns=list(df.columns),
