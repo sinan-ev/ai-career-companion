@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv
+env/
+venv/
+ENV/
+artifacts/
+exports/
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Other
+.gemini/
