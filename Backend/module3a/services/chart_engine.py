@@ -1,204 +1,407 @@
-import pandas as pd
-from typing import List, Dict, Any
-from ..services.context_builder import DataContext
-import json
+"""
+Agentic Chart Engine for Module 3A
+====================================
+Architecture: 4 autonomous agents with a shared scratchpad and feedback loop.
 
+  ┌─────────────┐     ┌──────────────┐     ┌──────────────┐     ┌─────────────┐
+  │ Scout Agent │────▶│ Planner Agent│────▶│ Critic Agent │────▶│ Build Agent │
+  │ (explores   │     │ (designs 5-6 │     │ (validates & │     │ (executes & │
+  │  the data)  │     │  chart specs)│     │  improves)   │     │  returns)   │
+  └─────────────┘     └──────────────┘     └──────────────┘     └─────────────┘
+        │                                         │
+        └─────────────── scratchpad ──────────────┘
+"""
+
+import json
+import traceback
+from typing import Any
+import pandas as pd
+from ..services.context_builder import DataContext
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Shared scratchpad between agents
+# ─────────────────────────────────────────────────────────────────────────────
+class AgentScratchpad:
+    def __init__(self):
+        self.column_stats: dict = {}       # Scout fills this
+        self.chart_plan: list  = []        # Planner fills this
+        self.critique: str     = ""        # Critic fills this
+        self.charts: list      = []        # Builder fills this
+        self.iterations: int   = 0
+        self.log: list[str]    = []
+
+    def record(self, agent: str, msg: str):
+        entry = f"[{agent}] {msg}"
+        self.log.append(entry)
+        print(entry)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Helper: dtype guard
+# ─────────────────────────────────────────────────────────────────────────────
+def _is_numeric(df: pd.DataFrame, col: str) -> bool:
+    return col in df.columns and pd.api.types.is_numeric_dtype(df[col])
+
+def _is_categorical(df: pd.DataFrame, col: str) -> bool:
+    return col in df.columns and not pd.api.types.is_numeric_dtype(df[col])
+
+def _safe_agg(df: pd.DataFrame, x: str, y: str, agg: str):
+    """Aggregate safely; returns (x_data, y_data) or raises."""
+    if not _is_numeric(df, y):
+        raise ValueError(f"y_col '{y}' is not numeric (dtype={df[y].dtype})")
+    fn = df.groupby(x)[y].sum if agg == "sum" else df.groupby(x)[y].mean
+    grouped = fn().sort_values(ascending=False).head(15)
+    x_data = grouped.index.astype(str).tolist()
+    y_data = [round(v, 4) if pd.notna(v) else 0 for v in grouped.tolist()]
+    return x_data, y_data
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Agent 1 – Scout Agent
+# Explores the dataframe and fills the scratchpad with rich column statistics
+# ─────────────────────────────────────────────────────────────────────────────
+def scout_agent(df: pd.DataFrame, context: DataContext, pad: AgentScratchpad):
+    pad.record("Scout", "Profiling dataset columns...")
+    stats: dict[str, Any] = {}
+
+    for col in df.columns:
+        info: dict[str, Any] = {"dtype": str(df[col].dtype), "nulls": int(df[col].isna().sum())}
+        if _is_numeric(df, col):
+            info["min"]    = float(df[col].min())
+            info["max"]    = float(df[col].max())
+            info["mean"]   = float(df[col].mean())
+            info["std"]    = float(df[col].std())
+            info["nunique"]= int(df[col].nunique())
+            info["kind"]   = "numeric"
+        else:
+            vc = df[col].value_counts()
+            info["top_values"] = vc.head(5).index.tolist()
+            info["nunique"]    = int(df[col].nunique())
+            info["kind"]       = "categorical"
+            # Mark likely ID columns
+            if info["nunique"] > 0.9 * len(df) or col.upper().endswith(("ID","NUMBER","NUM","CODE","REF")):
+                info["likely_id"] = True
+        stats[col] = info
+
+    pad.column_stats = stats
+    pad.record("Scout", f"Profiled {len(stats)} columns. "
+               f"Numeric: {len(context.numeric_columns)}, "
+               f"Categorical: {len(context.categorical_columns)}, "
+               f"Datetime: {len(context.datetime_columns)}")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Agent 2 – Planner Agent
+# Uses LLM + Scout stats to design a rich set of chart specs
+# ─────────────────────────────────────────────────────────────────────────────
+PLANNER_SYSTEM = """You are an expert BI Dashboard Architect. 
+Given a dataset profile, design exactly 5-6 highly valuable, diverse charts for an executive dashboard.
+
+Rules:
+- NEVER use ID-like columns (marked likely_id=true) as y_col for aggregation.
+- NEVER aggregate (sum/mean) a categorical column.
+- Mix chart types: bar, line, horizontal_bar, histogram, scatter (where logical).
+- Cover: comparison, trend (if datetime exists), distribution, correlation, top-N ranking.
+- Each chart must produce non-empty data.
+- Respond ONLY with a JSON object: {"charts": [...]}
+
+Each chart object must have:
+  type: bar | line | horizontal_bar | histogram | scatter
+  title: descriptive business title
+  analysis_type: comparison | trend | distribution | top_n | correlation
+  x_col: column name from the dataset
+  y_col: column name OR "COUNT"
+  agg: sum | mean | none | count
+  reason: one sentence why this chart is valuable
+"""
+
+def planner_agent(df: pd.DataFrame, context: DataContext, pad: AgentScratchpad, llm_client) -> bool:
+    pad.record("Planner", "Designing chart specifications...")
+
+    # Build a concise profile for the LLM (avoid token overflow)
+    profile_rows = []
+    for col, info in pad.column_stats.items():
+        if info["kind"] == "numeric":
+            profile_rows.append(
+                f"  {col} [NUMERIC] mean={info['mean']:.2f} std={info['std']:.2f} "
+                f"nunique={info['nunique']} nulls={info['nulls']}"
+            )
+        else:
+            lid = " [ID-LIKE]" if info.get("likely_id") else ""
+            profile_rows.append(
+                f"  {col} [CATEGORICAL{lid}] top={info['top_values'][:3]} "
+                f"nunique={info['nunique']} nulls={info['nulls']}"
+            )
+    
+    date_hint = f"Datetime columns available: {context.datetime_columns}" if context.datetime_columns else "No datetime columns."
+    critique_hint = f"\n\nPrevious critique to address:\n{pad.critique}" if pad.critique else ""
+
+    prompt = f"""Dataset: {context.dataset_name}
+Description: {context.dataset_description}
+{date_hint}
+
+Column Profile:
+{chr(10).join(profile_rows)}
+
+Column Meanings:
+{json.dumps(context.column_meanings, indent=2)[:1500]}
+{critique_hint}
+
+Design 5-6 business-critical charts. Output JSON only."""
+
+    try:
+        response = llm_client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": PLANNER_SYSTEM},
+                {"role": "user",   "content": prompt}
+            ],
+            model="llama-3.1-8b-instant",
+            temperature=0.15,
+            max_tokens=2048,
+            response_format={"type": "json_object"}
+        )
+        raw = response.choices[0].message.content.strip()
+        parsed = json.loads(raw)
+        pad.chart_plan = parsed.get("charts", [])
+        pad.record("Planner", f"Designed {len(pad.chart_plan)} chart specs.")
+        return True
+    except Exception as e:
+        pad.record("Planner", f"ERROR: {e}")
+        return False
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Agent 3 – Critic Agent
+# Validates chart specs against the actual dataframe; rewrites bad specs
+# ─────────────────────────────────────────────────────────────────────────────
+def critic_agent(df: pd.DataFrame, pad: AgentScratchpad) -> bool:
+    """Returns True if plan passes; False if plan needs replanning."""
+    pad.record("Critic", "Validating chart plan against dataframe...")
+    issues = []
+    valid_charts = []
+
+    for cdef in pad.chart_plan:
+        x_col = cdef.get("x_col", "")
+        y_col = cdef.get("y_col", "")
+        agg   = cdef.get("agg", "none")
+        title = cdef.get("title", "?")
+
+        # Check x_col exists
+        if x_col not in df.columns:
+            issues.append(f"'{title}': x_col '{x_col}' does not exist in dataset.")
+            continue
+
+        # Check y_col exists (unless COUNT)
+        if y_col not in ("COUNT", "none", "") and y_col not in df.columns:
+            issues.append(f"'{title}': y_col '{y_col}' does not exist in dataset.")
+            # Auto-repair: use COUNT
+            cdef["y_col"] = "COUNT"
+            cdef["agg"]   = "count"
+            issues.append(f"  → Auto-repaired '{title}' to use COUNT of {x_col}.")
+            valid_charts.append(cdef)
+            continue
+
+        # Check numeric constraint for agg
+        if agg in ("sum", "mean") and y_col not in ("COUNT", "none", ""):
+            if not _is_numeric(df, y_col):
+                issues.append(f"'{title}': y_col '{y_col}' is categorical, cannot {agg}.")
+                # Auto-repair: switch to COUNT
+                cdef["y_col"] = "COUNT"
+                cdef["agg"]   = "count"
+                issues.append(f"  → Auto-repaired '{title}' to COUNT of {x_col}.")
+
+        # Check histogram only on numeric x_col
+        if cdef.get("type") == "histogram" and not _is_numeric(df, x_col):
+            issues.append(f"'{title}': histogram needs numeric x_col, '{x_col}' is not numeric.")
+            cdef["type"] = "bar"
+            cdef["y_col"] = "COUNT"
+            cdef["agg"]   = "count"
+            issues.append(f"  → Auto-repaired to bar/COUNT.")
+
+        valid_charts.append(cdef)
+
+    pad.chart_plan = valid_charts
+
+    if issues:
+        pad.critique = "\n".join(issues)
+        pad.record("Critic", f"Found {len(issues)} issues. Plan updated. Needs re-evaluation.")
+        # If more than half the charts had critical issues, trigger replanning
+        critical = [i for i in issues if "does not exist" in i]
+        return len(critical) == 0  # OK if only soft issues
+    else:
+        pad.critique = ""
+        pad.record("Critic", "All chart specs valid. ✓")
+        return True
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Agent 4 – Builder Agent
+# Executes validated specs against the real dataframe and produces chart data
+# ─────────────────────────────────────────────────────────────────────────────
+def builder_agent(df: pd.DataFrame, pad: AgentScratchpad):
+    pad.record("Builder", f"Building {len(pad.chart_plan)} charts...")
+    charts = []
+
+    for cdef in pad.chart_plan:
+        x_col  = cdef.get("x_col", "")
+        y_col  = cdef.get("y_col", "")
+        agg    = cdef.get("agg", "none")
+        ctype  = cdef.get("type", "bar")
+        title  = cdef.get("title", "Chart")
+        a_type = cdef.get("analysis_type", "comparison")
+
+        x_data, y_data = [], []
+        try:
+            if y_col in ("COUNT", "count") or agg == "count":
+                grouped = df[x_col].value_counts().head(15)
+                x_data  = grouped.index.astype(str).tolist()
+                y_data  = grouped.tolist()
+
+            elif ctype == "histogram" or a_type == "distribution":
+                if _is_numeric(df, x_col):
+                    cuts, bins = pd.cut(df[x_col].dropna(), bins=10, retbins=True)
+                    counts = pd.Series(cuts).value_counts(sort=False)
+                    x_data = [f"{bins[i]:.1f}–{bins[i+1]:.1f}" for i in range(len(bins)-1)]
+                    y_data = counts.tolist()
+                    ctype  = "bar"
+                else:
+                    grouped = df[x_col].value_counts().head(15)
+                    x_data  = grouped.index.astype(str).tolist()
+                    y_data  = grouped.tolist()
+                    ctype   = "bar"
+
+            elif ctype == "scatter" and _is_numeric(df, x_col) and _is_numeric(df, y_col):
+                sample  = df[[x_col, y_col]].dropna().sample(min(200, len(df)), random_state=42)
+                x_data  = sample[x_col].round(4).tolist()
+                y_data  = sample[y_col].round(4).tolist()
+
+            elif agg in ("sum", "mean"):
+                x_data, y_data = _safe_agg(df, x_col, y_col, agg)
+
+            else:
+                # Raw ordered sample (e.g. trend with datetime)
+                subset = [x_col] + ([y_col] if y_col in df.columns else [])
+                sample = df.dropna(subset=subset).head(30)
+                if pd.api.types.is_datetime64_any_dtype(df[x_col]):
+                    sample = sample.sort_values(x_col)
+                x_data = sample[x_col].astype(str).tolist()
+                y_data = sample[y_col].tolist() if y_col in df.columns else []
+
+            if not x_data or not y_data:
+                pad.record("Builder", f"⚠ Skipping '{title}' — empty data.")
+                continue
+
+            charts.append({
+                "type":          ctype,
+                "title":         title,
+                "analysis_type": a_type,
+                "reason":        cdef.get("reason", ""),
+                "figure": {
+                    "data":   [{"type": ctype, "x": x_data, "y": y_data}],
+                    "layout": {
+                        "title":    title,
+                        "template": "plotly_white",
+                        "font":     {"family": "Inter, sans-serif"},
+                    }
+                }
+            })
+            pad.record("Builder", f"✓ Built: {title} ({len(x_data)} data points)")
+
+        except Exception as e:
+            pad.record("Builder", f"✗ Failed '{title}': {e}")
+            continue
+
+    pad.charts = charts
+    pad.record("Builder", f"Done. {len(charts)} charts successfully built.")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Heuristic fallback (no LLM)
+# ─────────────────────────────────────────────────────────────────────────────
+def _heuristic_charts(df: pd.DataFrame, context: DataContext) -> list:
+    charts = []
+    nums = [c for c in context.numeric_columns
+            if not c.upper().endswith(("ID","NUMBER","NUM"))]
+    cats = context.categorical_columns
+
+    if nums:
+        col = nums[0]
+        try:
+            cuts, bins = pd.cut(df[col].dropna(), bins=10, retbins=True)
+            x_data = [f"{bins[i]:.1f}–{bins[i+1]:.1f}" for i in range(len(bins)-1)]
+            y_data = pd.Series(cuts).value_counts(sort=False).tolist()
+            if x_data and y_data:
+                charts.append({"type": "bar", "title": f"Distribution of {col}",
+                    "analysis_type": "distribution", "reason": "Auto-generated fallback",
+                    "figure": {"data": [{"type": "bar", "x": x_data, "y": y_data}],
+                               "layout": {"title": f"Distribution of {col}", "template": "plotly_white"}}})
+        except Exception: pass
+
+    if cats and nums:
+        cat_col, num_col = cats[0], nums[0]
+        try:
+            grouped = df.groupby(cat_col)[num_col].sum().sort_values(ascending=False).head(10)
+            x_data  = grouped.index.astype(str).tolist()
+            y_data  = [round(v, 2) for v in grouped.tolist()]
+            if x_data and y_data:
+                charts.append({"type": "bar", "title": f"Total {num_col} by {cat_col}",
+                    "analysis_type": "comparison", "reason": "Auto-generated fallback",
+                    "figure": {"data": [{"type": "bar", "x": x_data, "y": y_data}],
+                               "layout": {"title": f"Total {num_col} by {cat_col}", "template": "plotly_white"}}})
+        except Exception: pass
+    return charts
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Public entry point – replaces old generate_charts()
+# ─────────────────────────────────────────────────────────────────────────────
 def generate_charts(
-    plan: list[str],
+    plan: list,
     stats: dict,
     df: pd.DataFrame,
     context: DataContext,
-    llm_client = None
+    llm_client=None,
+    max_iterations: int = 2
 ) -> list[dict]:
-    charts = []
+    """
+    Multi-agent chart generation pipeline.
+    Scout → Planner → Critic → Builder  (with up to `max_iterations` critique loops)
+    """
+    pad = AgentScratchpad()
+    pad.record("Orchestrator", "Starting agentic chart pipeline...")
 
-    def _is_numeric(col_name: str) -> bool:
-        """Return True if col_name exists in df and is a numeric dtype."""
-        if col_name not in df.columns:
-            return False
-        return pd.api.types.is_numeric_dtype(df[col_name])
+    # ── Agent 1: Scout ────────────────────────────────────────────────────────
+    scout_agent(df, context, pad)
 
-
-    # If we have an LLM, use it to intelligently design charts
     if llm_client:
-        prompt = f"""
-        You are an expert Data Analyst. I need to design between 5 and 6 meaningful, highly valuable charts for an executive dashboard.
-        
-        Dataset Context:
-        Name: {context.dataset_name}
-        Description: {context.dataset_description}
-        
-        Columns available:
-        Categorical: {context.categorical_columns}
-        Numeric: {context.numeric_columns}
-        Datetime: {context.datetime_columns}
-        
-        Column Meanings:
-        {json.dumps(context.column_meanings, indent=2)}
-        
-        Rules:
-        1. DO NOT use ID columns (like ORDERNUMBER, ID, etc.) for mathematical aggregations (e.g., don't average them). You can count them to find volume.
-        2. DO NOT use meaningless correlations (e.g. ORDERNUMBER vs QUANTITY).
-        3. Pick logical relationships (e.g. Sales by Product Line, Monthly Trend of Sales, Quantity by Status).
-        4. Focus on business value and actionable insights.
-        5. For each chart, provide:
-           - type: The chart type ('bar', 'line', 'histogram', 'horizontal_bar')
-           - title: A descriptive business title (e.g., 'Total Sales by Product Line')
-           - analysis_type: One of ('comparison', 'trend', 'distribution', 'top_n')
-           - x_col: The column for the X-axis
-           - y_col: The column for the Y-axis (or 'COUNT' if we are just counting the x_col occurrences)
-           - agg: The aggregation method if y_col is a numeric column ('sum', 'mean', or 'none'). Default is 'sum' for business metrics like sales.
+        for iteration in range(1, max_iterations + 1):
+            pad.iterations = iteration
+            pad.record("Orchestrator", f"=== Iteration {iteration} ===")
 
-        Output strictly as a JSON object with a single key "charts" containing a list of chart objects. No markdown formatting.
-        Example:
-        {{
-          "charts": [
-            {{"type": "bar", "title": "Total Sales by Product Line", "analysis_type": "comparison", "x_col": "PRODUCTLINE", "y_col": "SALES", "agg": "sum"}},
-            {{"type": "line", "title": "Sales Trend", "analysis_type": "trend", "x_col": "ORDERDATE", "y_col": "SALES", "agg": "sum"}},
-            {{"type": "histogram", "title": "Distribution of Order Quantities", "analysis_type": "distribution", "x_col": "QUANTITYORDERED", "y_col": "none", "agg": "none"}}
-          ]
-        }}
-        """
-        
-        try:
-            response = llm_client.chat.completions.create(
-                messages=[{"role": "user", "content": prompt}],
-                model="llama-3.1-8b-instant",
-                temperature=0.1,
-                max_tokens=2048,
-                response_format={"type": "json_object"}
-            )
-            raw_content = response.choices[0].message.content.strip()
-            
-            # clean potential markdown
-            if raw_content.startswith("```json"):
-                raw_content = raw_content[7:]
-            if raw_content.endswith("```"):
-                raw_content = raw_content[:-3]
-                
-            parsed = json.loads(raw_content.strip())
-            chart_definitions = parsed.get("charts", [])
-            
-            for cdef in chart_definitions:
-                x_col = cdef.get("x_col")
-                y_col = cdef.get("y_col")
-                agg = cdef.get("agg", "none")
-                chart_type = cdef.get("type", "bar")
-                title = cdef.get("title", "Chart")
-                analysis_type = cdef.get("analysis_type", "comparison")
-                
-                x_data, y_data = [], []
-                
-                try:
-                    if y_col == 'COUNT':
-                        grouped = df[x_col].value_counts().head(15)
-                        x_data = grouped.index.astype(str).tolist()
-                        y_data = grouped.tolist()
-                    elif chart_type == "histogram" or analysis_type == "distribution":
-                        # histogram only makes sense on numeric x_col
-                        if not _is_numeric(x_col):
-                            # fall back to value_counts bar chart
-                            grouped = df[x_col].value_counts().head(15)
-                            x_data = grouped.index.astype(str).tolist()
-                            y_data = grouped.tolist()
-                            chart_type = "bar"
-                        else:
-                            counts_series = pd.Series(pd.cut(df[x_col], bins=10)).value_counts(sort=False)
-                            bins = pd.cut(df[x_col], bins=10, retbins=True)[1]
-                            x_data = [f"{bins[i]:.1f}-{bins[i+1]:.1f}" for i in range(len(bins)-1)]
-                            y_data = counts_series.tolist()
-                            chart_type = "bar"
-                    elif agg in ("sum", "mean") and _is_numeric(y_col):
-                        fn = df.groupby(x_col)[y_col].sum if agg == "sum" else df.groupby(x_col)[y_col].mean
-                        grouped = fn().sort_values(ascending=False).head(15)
-                        x_data = grouped.index.astype(str).tolist()
-                        y_data = [round(v, 4) if pd.notna(v) else 0 for v in grouped.tolist()]
-                    elif agg in ("sum", "mean") and not _is_numeric(y_col):
-                        # LLM chose a non-numeric y_col for aggregation – fall back to COUNT of x_col
-                        print(f"[chart_engine] y_col '{y_col}' is not numeric for agg='{agg}'; falling back to COUNT of '{x_col}'")
-                        grouped = df[x_col].value_counts().head(15)
-                        x_data = grouped.index.astype(str).tolist()
-                        y_data = grouped.tolist()
-                        y_col = 'COUNT'
-                    else:
-                        # Raw data path
-                        subset = [x_col]
-                        if y_col in df.columns:
-                            subset.append(y_col)
-                        sample = df.dropna(subset=subset).head(30)
-                        if analysis_type == "trend" and pd.api.types.is_datetime64_any_dtype(df[x_col]):
-                            sample = sample.sort_values(x_col)
-                        x_data = sample[x_col].astype(str).tolist()
-                        y_data = sample[y_col].tolist() if y_col in df.columns else []
+            # ── Agent 2: Planner ─────────────────────────────────────────────
+            if not planner_agent(df, context, pad, llm_client):
+                pad.record("Orchestrator", "Planner failed — using heuristic fallback.")
+                return _heuristic_charts(df, context)
 
-                    # Skip chart if no usable data was produced
-                    if not x_data or not y_data:
-                        print(f"[chart_engine] Skipping '{title}' – empty data after processing.")
-                        continue
+            # ── Agent 3: Critic ──────────────────────────────────────────────
+            plan_ok = critic_agent(df, pad)
 
-                    figure = {
-                        "data": [{"type": chart_type, "x": x_data, "y": y_data}],
-                        "layout": {
-                            "title": title,
-                            "template": "plotly_white",
-                            "font": {"family": "Inter"}
-                        }
-                    }
-                    charts.append({
-                        "type": chart_type,
-                        "title": title,
-                        "analysis_type": analysis_type,
-                        "figure": figure
-                    })
-                except Exception as e:
-                    print(f"Error generating chart {title}: {e}")
-                    continue
-                    
-            if charts:
-                return charts
+            if plan_ok or iteration == max_iterations:
+                break  # Plan is good, or we've used all retries
+            else:
+                pad.record("Orchestrator",
+                    f"Critic flagged critical issues. Re-running Planner (iteration {iteration + 1})...")
 
-        except Exception as e:
-            import traceback
-            print(f"Error calling LLM for charts: {e}")
-            traceback.print_exc()
-            pass # Fall back to heuristic
+        # ── Agent 4: Builder ──────────────────────────────────────────────────
+        builder_agent(df, pad)
 
-    # Fallback heuristic if LLM fails or is not provided
-    print("Using heuristic chart generation")
-    
-    # 1. Distribution of a meaningful metric (exclude ID)
-    meaningful_nums = [c for c in context.numeric_columns if not c.upper().endswith("ID") and not c.upper().endswith("NUMBER")]
-    if meaningful_nums:
-        col = meaningful_nums[0]
-        counts_series = pd.Series(pd.cut(df[col], bins=10)).value_counts(sort=False)
-        bins = pd.cut(df[col], bins=10, retbins=True)[1]
-        x_data = [f"{bins[i]:.1f}-{bins[i+1]:.1f}" for i in range(len(bins)-1)]
-        y_data = counts_series.tolist()
-        charts.append({
-            "type": "bar",
-            "title": f"Distribution of {col}",
-            "analysis_type": "distribution",
-            "figure": {
-                "data": [{"type": "bar", "x": x_data, "y": y_data}],
-                "layout": {"title": f"Distribution of {col}", "template": "plotly_white"}
-            }
-        })
+        pad.record("Orchestrator",
+            f"Pipeline complete after {pad.iterations} iteration(s). "
+            f"Charts built: {len(pad.charts)}")
 
-    # 2. Comparison (Categorical vs Meaningful Metric)
-    if context.categorical_columns and meaningful_nums:
-        cat_col = context.categorical_columns[0]
-        num_col = meaningful_nums[0]
-        grouped = df.groupby(cat_col)[num_col].sum().sort_values(ascending=False).head(10)
-        x_data = grouped.index.astype(str).tolist()
-        y_data = grouped.tolist()
-        charts.append({
-            "type": "bar",
-            "title": f"Total {num_col} by {cat_col}",
-            "analysis_type": "comparison",
-            "figure": {
-                "data": [{"type": "bar", "x": x_data, "y": y_data}],
-                "layout": {"title": f"Total {num_col} by {cat_col}", "template": "plotly_white"}
-            }
-        })
+        if pad.charts:
+            return pad.charts
 
-    return charts
+    # No LLM or builder produced nothing → heuristic fallback
+    pad.record("Orchestrator", "Falling back to heuristic chart generation.")
+    return _heuristic_charts(df, context)

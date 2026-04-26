@@ -1,3 +1,5 @@
+# Converts raw dataset → structured knowledge
+
 from typing import Any, Dict, List
 import pandas as pd
 from dataclasses import dataclass
@@ -22,7 +24,7 @@ def build_context(module1_output: Dict[str, Any], module2_output: Dict[str, Any]
         column_meanings=summary.get("column_meanings", {})
     )
 
-def get_context_chunks(context: DataContext) -> List[str]:
+def get_context_chunks(context: DataContext) -> List[str]: #These chunks go into:RAG(vector database) ,DataContext → RAG → LLM
     chunks = [f"Dataset Name: {context.dataset_name}"]
     chunks.append(f"Description: {context.dataset_description}")
     for col, meaning in context.column_meanings.items():

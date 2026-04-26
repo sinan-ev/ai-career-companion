@@ -60,15 +60,13 @@ const PipelineView = ({ steps = [], plan = [] }) => {
         </div>
       </div>
 
-      {/* Pipeline Flow */}
-
       {/* Module 3‑A Feature Pills */}
       <div className="pipeline-module3a-pills">
         {[
-          { emoji: '🧠', label: 'LLM Chart Planning', desc: 'AI designs 5–6 business charts' },
-          { emoji: '📊', label: 'Statistical Analysis', desc: 'Correlations, distributions & trends' },
-          { emoji: '🔍', label: 'RAG Context', desc: 'Vector-indexed EDA report' },
-          { emoji: '💬', label: 'AI Chatbot', desc: 'Ask questions about your data' },
+          { emoji: '🔭', label: 'Scout Agent',   desc: 'Profiles every column – dtype, nulls, top values, ID detection' },
+          { emoji: '🧠', label: 'Planner Agent', desc: 'LLM designs 5–6 business-critical chart specs' },
+          { emoji: '🔍', label: 'Critic Agent',  desc: 'Validates specs, auto-repairs bad columns & aggregations' },
+          { emoji: '⚙️', label: 'Builder Agent', desc: 'Executes specs, skips empties, returns clean chart data' },
         ].map((item, i) => (
           <div className="pipeline-m3a-pill" key={i}>
             <span className="pipeline-m3a-emoji">{item.emoji}</span>

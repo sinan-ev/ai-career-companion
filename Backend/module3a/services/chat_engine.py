@@ -45,12 +45,15 @@ def chat(
             model=get_settings().groq_model,
             messages=messages,
             temperature=0.3,
-            max_tokens=300
+            max_tokens=400
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
-        print(f"Chat Error: {e}")
-        return "⚠️ I'm sorry, I couldn't reach the AI model right now."
+        print(f"--- CHAT ENGINE ERROR ---")
+        print(f"Error Message: {str(e)}")
+        
+        # Smart fallback based on context
+        return f"I'm currently experiencing some technical difficulties reaching my advanced reasoning core. However, looking at your dataset '{context.dataset_name}', I can confirm it has {len(df.columns)} columns including {', '.join(context.numeric_columns[:3])}. Please try asking your question again in a moment!"
 
 def _maybe_run_pandas(query: str, df: pd.DataFrame) -> Optional[str]:
     keywords = ["how many", "average", "total", "max", "min", "count", "sum", "percentage", "ratio"]
