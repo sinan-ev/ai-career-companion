@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, FileText, X, Zap, Database, Shield, Brain } from 'lucide-react';
+import { Upload, FileText, X, Zap, Database, Shield, Brain, BarChart3 } from 'lucide-react';
 
 const UploadZone = ({ onUpload }) => {
   const [dragActive, setDragActive] = useState(false);
@@ -52,6 +52,7 @@ const UploadZone = ({ onUpload }) => {
     { icon: Brain, label: "AI Understanding", desc: "Deep schema analysis" },
     { icon: Database, label: "Smart Cleaning", desc: "Auto imputation & encoding" },
     { icon: Shield, label: "Quality Scoring", desc: "A–F data quality grade" },
+    { icon: BarChart3, label: "AI Analyst", desc: "Auto-dashboards & insights" },
   ];
 
   return (
@@ -136,7 +137,7 @@ const UploadZone = ({ onUpload }) => {
         </AnimatePresence>
       </motion.div>
 
-      {/* Feature Pills */}
+
       <motion.div 
         className="features-row"
         initial={{ opacity: 0, y: 20 }}
@@ -367,7 +368,7 @@ const UploadZone = ({ onUpload }) => {
 
         .features-row {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(2, 1fr);
           gap: 12px;
         }
 

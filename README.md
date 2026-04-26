@@ -1,58 +1,50 @@
 # Unified Data Intelligence & Cleaning Agent (v2.0.1)
 
-A professional-grade, AI-powered platform designed to transform raw spreadsheets into actionable insights and ML-ready datasets. This project combines advanced data profiling with LLM-based reasoning to automate the most tedious parts of data science.
+A professional‑grade, AI‑powered platform that transforms raw spreadsheets into actionable insights, ML‑ready datasets, and a polished interactive dashboard.
 
-## 🚀 Key Features
+## 🚀 New Features (v2.0.1)
 
-- **Dual-Module Intelligence**: 
-    - **Module 1 (Understanding)**: Automatic domain detection, column explanation (LLM), and narrative data summaries.
-    - **Module 2 (Preprocessing)**: Deep EDA, AI-planned cleaning steps, and target variable detection.
-- **Dynamic Pipeline**: The cleaning steps are not hardcoded; an AI agent plans the pipeline (scaling, encoding, imputation) based on the specific data quality issues detected.
-- **Dual Export System**:
-    - **Analytics Dataset**: Cleaned but human-readable data for dashboards.
-    - **ML-Ready Dataset**: Fully encoded and scaled data for model training.
-- **Interactive Dashboard**: A modern React frontend to visualize data quality, pipeline steps, and column statistics.
+- **Module 3‑A (AI Analyst)** – End‑to‑end pipeline that:
+  - Builds a Retrieval‑Augmented Generation (RAG) vector store from the EDA report.
+  - Uses `llama‑3.1‑8b‑instant` to **plan 5‑6 business‑focused charts**.
+  - Generates concise insights, a narrative explanation, and a **RAG‑backed chatbot**.
+  - Returns a `Module3AResult` JSON consumed by the React dashboard.
+- **Upload Page Enhancements** – The upload zone now shows a concise overview of Module 3‑A capabilities.
+- **Pipeline View** – Visual representation of the AI‑orchestrated preprocessing steps plus a highlighted Module 3‑A overview.
+- **Robust Model Handling** – Updated token budget (`max_tokens=2048`) and strict JSON response format.
 
 ## 🛠 Tech Stack
 
 ### Backend (Python/FastAPI)
-- **Framework**: FastAPI (High-performance API)
-- **Intelligence**: Groq AI (Llama 3.3 70B) for column reasoning and pipeline planning.
-- **Processing**: Pandas, NumPy, Scikit-learn.
-- **Validation**: Pydantic v2.
+- **Framework**: FastAPI
+- **LLM**: Groq (`llama‑3.1‑8b‑instant`)
+- **Processing**: pandas, NumPy, scikit‑learn
+- **Validation**: Pydantic v2
 
 ### Frontend (React/Vite)
-- **Framework**: React 18+ with Vite.
-- **Styling**: Vanilla CSS (Modern design patterns, glassmorphism).
-- **Icons/Visuals**: Lucid-react & custom CSS components.
+- **Framework**: React 18+ with Vite
+- **Visualization**: Recharts (bar, line, histogram, horizontal bar)
+- **Styling**: Vanilla CSS with glass‑morphism, vibrant palettes, micro‑animations
 
 ## 📂 Project Structure
 
 ```text
 ├── Backend/
-│   ├── main.py             # Unified API Entry Point
-│   ├── module1/            # Data Understanding Logic (Rules + LLM)
-│   ├── module2/            # Advanced EDA & ML Preprocessing
-│   ├── exports/            # Processed CSV/Excel downloads
-│   └── artifacts/          # Saved Encoders & Scalers (.pkl)
+│   ├── main.py                # Unified API entry point
+│   ├── module1/               # Data understanding (schema, column meanings)
+│   ├── module2/               # Advanced EDA & preprocessing
+│   ├── module3a/              # AI Analyst – RAG, chart engine, insights, chatbot
+│   └── exports/               # Generated CSVs & artifacts
 ├── frontend/
-│   ├── src/components/     # Dashboard, DataTable, UploadZone, etc.
-│   └── src/App.jsx         # Main Frontend Orchestrator
+│   ├── src/components/        # UploadZone, AnalystView, PipelineView, etc.
+│   └── src/App.jsx            # Front‑end orchestrator
 └── README.md
 ```
 
-## 🚥 Quick Start
-
-### 1. Setup Backend
-1. Navigate to `/Backend`.
-2. Create a `.env` file and add your `GROQ_API_KEY`.
-3. Install dependencies: `pip install -r requirements.txt`.
-4. Run server: `python main.py`.
-
-### 2. Setup Frontend
-1. Navigate to `/frontend`.
-2. Install dependencies: `npm install`.
-3. Run dev server: `npm run dev`.
+## 📖 Documentation
+- **API Reference** – Updated `/api/analyze` endpoint returns a `Module3AResult` with charts, insights, and pipeline plan.
+- **Architecture** – Diagram now includes the RAG store, chart engine, and chatbot modules.
+- **User Guide** – Upload a CSV/Excel file, click **Launch Pipeline**, and explore the auto‑generated dashboard.
 
 ---
 *Created by the Data Intelligence Team*

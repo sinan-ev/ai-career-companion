@@ -51,6 +51,7 @@ from module2.models.module2_response import Module2Response
 class UnifiedResponse(BaseModel):
     module1: AnalysisResponse
     module2: Module2Response
+    dataset_id: Optional[str] = None
 
 @app.post("/api/process", response_model=UnifiedResponse)
 async def process_dataset(
@@ -73,7 +74,13 @@ async def process_dataset(
     try:
         content = await file.read()
         if suffix == ".csv":
-            df = pd.read_csv(io.BytesIO(content))
+            try:
+                df = pd.read_csv(io.BytesIO(content), encoding='utf-8')
+            except UnicodeDecodeError:
+                try:
+                    df = pd.read_csv(io.BytesIO(content), encoding='latin-1')
+                except UnicodeDecodeError:
+                    df = pd.read_csv(io.BytesIO(content), encoding='windows-1252')
         else:
             df = pd.read_excel(io.BytesIO(content))
     except Exception as e:
@@ -114,10 +121,16 @@ async def process_dataset(
         print(f"Module 2 Error: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Module 2 failed: {str(e)}")
 
+    from module3a.api.routes.upload import datasets
+    import uuid
+    dataset_id = str(uuid.uuid4())
+    datasets[dataset_id] = df.copy()
+
     # 4. Success - Return both results
     return UnifiedResponse(
         module1=m1_result,
-        module2=m2_result
+        module2=m2_result,
+        dataset_id=dataset_id
     )
 
 @app.get("/health")
@@ -128,6 +141,18 @@ async def health():
         "app": settings.app_name,
         "version": "2.0.1"
     }
+
+from module3a.api.routes import upload as m3a_upload
+from module3a.api.routes import analyze as m3a_analyze
+from module3a.api.routes import charts as m3a_charts
+from module3a.api.routes import insights as m3a_insights
+from module3a.api.routes import chat as m3a_chat
+
+app.include_router(m3a_upload.router, prefix="/api", tags=["Module 3A"])
+app.include_router(m3a_analyze.router, prefix="/api", tags=["Module 3A"])
+app.include_router(m3a_charts.router, prefix="/api", tags=["Module 3A"])
+app.include_router(m3a_insights.router, prefix="/api", tags=["Module 3A"])
+app.include_router(m3a_chat.router, prefix="/api", tags=["Module 3A"])
 
 if __name__ == "__main__":
     import uvicorn

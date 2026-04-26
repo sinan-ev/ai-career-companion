@@ -18,6 +18,7 @@ import {
   Lightbulb,
   ArrowLeft,
 } from 'lucide-react';
+import AnalystView from './AnalystView';
 import {
   BarChart,
   Bar,
@@ -53,6 +54,7 @@ const Dashboard = ({ data, onReset }) => {
     { id: 'pipeline',  label: 'Pipeline',   icon: Layers },
     { id: 'quality',   label: 'Quality',    icon: ShieldCheck },
     { id: 'exports',   label: 'Exports',    icon: FileDown },
+    { id: 'analyst',   label: 'AI Analyst', icon: Brain },
   ];
 
   // ─── Quality score color ───
@@ -445,6 +447,12 @@ const Dashboard = ({ data, onReset }) => {
 
         {activeTab === 'quality' && renderQuality()}
         {activeTab === 'exports' && renderExports()}
+        
+        {activeTab === 'analyst' && (
+          <div className="tab-content animate-fade-in" style={{ height: '100%' }}>
+            <AnalystView datasetId={data.dataset_id} module1Data={module1} />
+          </div>
+        )}
       </main>
 
       <style>{`

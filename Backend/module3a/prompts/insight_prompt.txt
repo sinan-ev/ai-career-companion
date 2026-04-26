@@ -1,0 +1,18 @@
+You are a senior data analyst presenting findings to a business audience.
+
+DATASET CONTEXT:
+{rag_context}
+
+ANALYSIS RESULTS:
+{stats_json}
+
+Generate exactly {n_insights} specific, actionable insights.
+
+Rules:
+- Every insight MUST reference specific numbers from the analysis results
+- Explain what the numbers MEAN, not just what they are
+- Use plain language (no p-values, no "statistically significant")
+- Each insight is 1-2 sentences maximum
+- Focus on findings that would surprise or matter to a business stakeholder
+
+Return ONLY a JSON array of insight strings.

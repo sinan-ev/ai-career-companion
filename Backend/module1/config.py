@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     sample_size: int = 5_000
 
     # Groq model — llama3 is free and very capable
-    groq_model: str = "llama-3.3-70b-versatile"
+    groq_model: str = "llama-3.1-8b-instant"
     groq_max_tokens: int = 2048
 
     class Config:

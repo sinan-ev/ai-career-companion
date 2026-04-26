@@ -7,7 +7,7 @@ from typing import List, Optional
 #  CONSTANTS
 # ─────────────────────────────────────────────
 
-GROQ_MODEL       = "llama-3.3-70b-versatile"
+GROQ_MODEL       = "llama-3.1-8b-instant"
 TEMPERATURE      = 0.1       # low = deterministic JSON output
 MAX_TOKENS       = 256       # plan is just a short JSON array
 PROMPT_FILE      = os.path.join(
