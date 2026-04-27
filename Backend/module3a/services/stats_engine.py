@@ -1,3 +1,5 @@
+# REAL DATA ANALYSIS (NO AI GUESSING)
+
 import pandas as pd
 from typing import Any, Dict, List
 from ..services.context_builder import DataContext
