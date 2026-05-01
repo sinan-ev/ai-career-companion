@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import {
@@ -47,6 +47,82 @@ const AnalystView = ({ datasetId, module1Data }) => {
       chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
     }
   }, [chatMessages]);
+
+  const renderedCharts = useMemo(() => {
+    if (!analysisResult?.charts || analysisResult.charts.length === 0) return null;
+    return (
+      <div className="charts-grid">
+        {analysisResult.charts.map((chart, idx) => (
+          <div key={idx} className="glass-card chart-wrapper">
+            <h4>{chart.title}</h4>
+            <div className="chart-render-area">
+              {chart.figure && chart.figure.data && chart.figure.data[0] ? (
+                (() => {
+                  const pData = chart.figure.data[0];
+                  const chartType = pData.type;
+                  const isHorizontal = chartType === 'horizontal_bar';
+                  const dataPoints = (pData.x || []).map((xVal, i) => ({
+                    name: String(xVal).length > 15 ? String(xVal).substring(0, 15) + '...' : xVal,
+                    value: pData.y ? pData.y[i] : 0
+                  }));
+                  
+                  const color = CHART_COLORS[idx % CHART_COLORS.length];
+                  
+                  return (
+                    <ResponsiveContainer width="100%" height="100%">
+                      {chartType === 'line' ? (
+                        <LineChart data={dataPoints} margin={{ top: 10, right: 20, left: 0, bottom: 20 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                          <XAxis dataKey="name" stroke="var(--text-muted)" tick={{ fontSize: 11 }} angle={-45} textAnchor="end" />
+                          <YAxis stroke="var(--text-muted)" tick={{ fontSize: 11 }} />
+                          <Tooltip
+                            contentStyle={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                            itemStyle={{ color: '#f1f5f9' }}
+                          />
+                          <Line type="monotone" dataKey="value" stroke={color} strokeWidth={3} dot={{ r: 4, fill: color, strokeWidth: 2, stroke: '#1e293b' }} activeDot={{ r: 6 }} />
+                        </LineChart>
+                      ) : (
+                        <BarChart data={dataPoints} layout={isHorizontal ? 'vertical' : 'horizontal'} margin={{ top: 10, right: 20, left: isHorizontal ? 40 : 0, bottom: 20 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={!isHorizontal} vertical={isHorizontal} />
+                          <XAxis 
+                            type={isHorizontal ? "number" : "category"} 
+                            dataKey={isHorizontal ? undefined : "name"} 
+                            stroke="var(--text-muted)" 
+                            tick={{ fontSize: 11 }} 
+                            angle={isHorizontal ? 0 : -45} 
+                            textAnchor={isHorizontal ? "middle" : "end"} 
+                          />
+                          <YAxis 
+                            type={isHorizontal ? "category" : "number"} 
+                            dataKey={isHorizontal ? "name" : undefined} 
+                            stroke="var(--text-muted)" 
+                            tick={{ fontSize: 11 }} 
+                            width={isHorizontal ? 80 : 40}
+                          />
+                          <Tooltip
+                            contentStyle={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                            itemStyle={{ color: '#f1f5f9' }}
+                            cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                          />
+                          <Bar dataKey="value" fill={color} radius={isHorizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]}>
+                            {dataPoints.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={CHART_COLORS[(idx + index) % CHART_COLORS.length]} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      )}
+                    </ResponsiveContainer>
+                  );
+                })()
+              ) : (
+                <div className="no-chart-data">Chart data unavailable</div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }, [analysisResult?.charts]);
 
   const handleAnalyze = async (e) => {
     if (e) e.preventDefault();
@@ -190,78 +266,7 @@ const AnalystView = ({ datasetId, module1Data }) => {
                 )}
 
                 {/* Charts Grid */}
-                {analysisResult.charts && analysisResult.charts.length > 0 && (
-                  <div className="charts-grid">
-                    {analysisResult.charts.map((chart, idx) => (
-                      <div key={idx} className="glass-card chart-wrapper">
-                        <h4>{chart.title}</h4>
-                        <div className="chart-render-area">
-                          {chart.figure && chart.figure.data && chart.figure.data[0] ? (
-                            (() => {
-                              const pData = chart.figure.data[0];
-                              const chartType = pData.type;
-                              const isHorizontal = chartType === 'horizontal_bar';
-                              const dataPoints = (pData.x || []).map((xVal, i) => ({
-                                name: String(xVal).length > 15 ? String(xVal).substring(0, 15) + '...' : xVal,
-                                value: pData.y ? pData.y[i] : 0
-                              }));
-                              
-                              const color = CHART_COLORS[idx % CHART_COLORS.length];
-                              
-                              return (
-                                <ResponsiveContainer width="100%" height="100%">
-                                  {chartType === 'line' ? (
-                                    <LineChart data={dataPoints} margin={{ top: 10, right: 20, left: 0, bottom: 20 }}>
-                                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                                      <XAxis dataKey="name" stroke="var(--text-muted)" tick={{ fontSize: 11 }} angle={-45} textAnchor="end" />
-                                      <YAxis stroke="var(--text-muted)" tick={{ fontSize: 11 }} />
-                                      <Tooltip
-                                        contentStyle={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                                        itemStyle={{ color: '#f1f5f9' }}
-                                      />
-                                      <Line type="monotone" dataKey="value" stroke={color} strokeWidth={3} dot={{ r: 4, fill: color, strokeWidth: 2, stroke: '#1e293b' }} activeDot={{ r: 6 }} />
-                                    </LineChart>
-                                  ) : (
-                                    <BarChart data={dataPoints} layout={isHorizontal ? 'vertical' : 'horizontal'} margin={{ top: 10, right: 20, left: isHorizontal ? 40 : 0, bottom: 20 }}>
-                                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={!isHorizontal} vertical={isHorizontal} />
-                                      <XAxis 
-                                        type={isHorizontal ? "number" : "category"} 
-                                        dataKey={isHorizontal ? undefined : "name"} 
-                                        stroke="var(--text-muted)" 
-                                        tick={{ fontSize: 11 }} 
-                                        angle={isHorizontal ? 0 : -45} 
-                                        textAnchor={isHorizontal ? "middle" : "end"} 
-                                      />
-                                      <YAxis 
-                                        type={isHorizontal ? "category" : "number"} 
-                                        dataKey={isHorizontal ? "name" : undefined} 
-                                        stroke="var(--text-muted)" 
-                                        tick={{ fontSize: 11 }} 
-                                        width={isHorizontal ? 80 : 40}
-                                      />
-                                      <Tooltip
-                                        contentStyle={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                                        itemStyle={{ color: '#f1f5f9' }}
-                                        cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-                                      />
-                                      <Bar dataKey="value" fill={color} radius={isHorizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]}>
-                                        {dataPoints.map((entry, index) => (
-                                          <Cell key={`cell-${index}`} fill={CHART_COLORS[(idx + index) % CHART_COLORS.length]} />
-                                        ))}
-                                      </Bar>
-                                    </BarChart>
-                                  )}
-                                </ResponsiveContainer>
-                              );
-                            })()
-                          ) : (
-                            <div className="no-chart-data">Chart data unavailable</div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                {renderedCharts}
               </motion.div>
             )}
           </AnimatePresence>
