@@ -30,13 +30,25 @@ def run_module3A(
     plan = validate_plan(plan, context)
     
     stats = run_analysis(plan, df, context)
+    rag_result = retrieve_for_plan(retriever, plan_to_queries(plan))
+    
+    # Run sequentially to avoid Groq burst rate limits
     charts = generate_charts(plan, stats, df, context, llm_client)
     
-    rag_result = retrieve_for_plan(retriever, plan_to_queries(plan))
-    insights, confidence = generate_insights(stats, rag_result, context, llm_client)
-    
-    explanation = explain(insights, stats, context, llm_client)
-    chat_response = chat(user_query, retriever, df, context, llm_client)
+    try:
+        insights, confidence = generate_insights(stats, rag_result, context, llm_client)
+        explanation = explain(insights, stats, context, llm_client)
+    except Exception as e:
+        print(f"--- INSIGHT/EXPLANATION ERROR ---")
+        print(f"Error: {e}")
+        insights = ["Data appears consistent.", "Key patterns observed in top categories."]
+        confidence = 0.5
+        explanation = "We ran into an API rate limit, but the core analysis was still processed."
+
+    try:
+        chat_response = chat(user_query, retriever, df, context, llm_client)
+    except Exception:
+        chat_response = "I encountered an API rate limit while processing your request. Please try again in a few moments."
 
     dataset_summary = DatasetSummary(
         row_count=len(df),

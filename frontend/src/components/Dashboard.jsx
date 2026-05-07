@@ -39,8 +39,16 @@ const BACKEND_URL = 'http://127.0.0.1:8000';
 
 const Dashboard = ({ data, onReset }) => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [analystLoaded, setAnalystLoaded] = useState(false);
 
   if (!data) return null;
+  
+  // Lazy load AnalystView
+  React.useEffect(() => {
+    if (activeTab === 'analyst') {
+      setAnalystLoaded(true);
+    }
+  }, [activeTab]);
 
   const { module1, module2 } = data;
   const eda = module2.eda_report;
@@ -448,8 +456,8 @@ const Dashboard = ({ data, onReset }) => {
         {activeTab === 'quality' && renderQuality()}
         {activeTab === 'exports' && renderExports()}
         
-        {activeTab === 'analyst' && (
-          <div className="tab-content animate-fade-in" style={{ height: '100%' }}>
+        {analystLoaded && (
+          <div className="tab-content animate-fade-in" style={{ height: '100%', display: activeTab === 'analyst' ? 'flex' : 'none' }}>
             <AnalystView datasetId={data.dataset_id} module1Data={module1} />
           </div>
         )}
