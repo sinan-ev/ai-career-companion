@@ -2,25 +2,32 @@
 
 This document details the internal logic and "brain" of the Data Intelligence Agent.
 
-## 🧠 The Dual-Module Pipeline
+## 🧠 The Multi-Module Pipeline
 
-The system processes data in two distinct phases to ensure both human interpretability and machine readiness.
+The system processes data in three distinct phases to ensure human interpretability, machine readiness, and interactive AI analysis.
 
 ### Module 1: Data Understanding
 **Goal**: Translate machine data (columns/rows) into a human business context.
 1.  **Normalization**: Detects "disguised" nulls (e.g., "N/A", "-999", "?") and converts them to standard NaNs.
 2.  **Hybrid Schema Detection**: Classifies columns (Numeric, Categorical, Datetime) and identifies potential "Unknown" types.
-3.  **Column Intelligence**: If a column name is cryptic (e.g., `cnt_v1`), the LLM analyzes sample values to explain it (e.g., "Total daily passenger count").
+3.  **Column Intelligence**: If a column name is cryptic (e.g., `cnt_v1`), the LLM analyzes sample values to explain it.
 4.  **Domain Detection**: Heuristics identify if the data is about Sales, HR, Healthcare, etc.
 5.  **AI Summary**: Generates a 3-5 paragraph "Narrative" of what the dataset represents.
 
 ### Module 2: Intelligent Preprocessing
 **Goal**: Transform raw data into structured artifacts for Machine Learning.
 1.  **Deep EDA**: Calculates skewness, outlier percentages, and high-correlation pairs.
-2.  **The Agent Planner**: Our most unique feature. We feed the EDA report and Module 1 summary into a Groq LLM. The agent returns a JSON plan (e.g., `["handle_missing", "encoding", "scaling"]`).
-3.  **Rule Engine**: Executes the agent's plan in a strict "Canonical Order" to prevent data leakage (e.g., always clean nulls before scaling).
-4.  **Target Detection**: Uses AI to guess which column is the "Target" (label) based on the business context.
-5.  **Artifact Manager**: Saves trained encoders and scalers. This allows you to apply the *exact same* transformations to new data in production.
+2.  **The Agent Planner**: We feed the EDA report and Module 1 summary into a Groq LLM. The agent returns a JSON plan.
+3.  **Rule Engine**: Executes the agent's plan in a strict "Canonical Order" to prevent data leakage.
+4.  **Target Detection**: Uses AI to guess which column is the "Target" (label).
+5.  **Artifact Manager**: Saves trained encoders and scalers.
+
+### Module 3A: AI Analyst & Dashboard (v2.0.1)
+**Goal**: Provide an interactive analytics interface backed by a RAG conversational agent.
+1.  **RAG Vector Store**: Converts the deep EDA and Module 1 summary into vector embeddings using `vector_store.py`.
+2.  **Chart Engine**: Uses `llama-3.1-8b-instant` to generate a JSON configuration for 5-6 Plotly-compatible business charts.
+3.  **Insights Engine**: Parallelized execution alongside chart generation to summarize data trends without UI lag.
+4.  **Strict Persona Chatbot**: A chat endpoint that uses strict prompting to eliminate technical jargon, relying on the RAG context to answer user queries about their data.
 
 ## 🔄 Data Flow Diagram
 
@@ -28,34 +35,37 @@ The system processes data in two distinct phases to ensure both human interpreta
 graph TD
     A[User Upload] --> B[FastAPI Backend]
     B --> C{Module 1: Understand}
-    C --> C1[Schema & Null Normalization]
-    C --> C2[LLM Column Meaning]
-    C --> C3[Domain Detection]
-    C3 --> D[Module 1 Output]
+    C --> D[Module 1 Output]
     
     D --> E{Module 2: Engineer}
-    E --> E1[Deep EDA]
-    E --> E2[AI Pipeline Planner]
-    E2 --> E3[Rule Engine Execution]
-    E3 --> E4[Dataset Builder]
+    E --> E1[Deep EDA & Planning]
+    E1 --> E4[Dataset Builder]
+    E4 --> F[Analytics CSV & ML CSV]
     
-    E4 --> F[Analytics CSV]
-    E4 --> G[ML-Ready CSV]
-    E4 --> H[Fitted Artifacts .pkl]
+    E1 --> M3{Module 3A: AI Analyst}
+    D --> M3
+    M3 --> V[Vector Store / RAG]
+    M3 --> CE[Chart Generation JSON]
+    M3 --> IE[Parallel Insights]
     
-    F & G & H --> I[React Dashboard]
+    V --> CB[Persona-based Chatbot]
+    
+    F --> I[React Dashboard]
+    CE --> I
+    IE --> I
+    CB --> I
 ```
 
 ## 🛠 Advanced Features
 
 ### Smart Target Detection
-The system doesn't just look for a column named "target". It scans:
-- **Meaning Keywords**: Detects words like "survival", "churn", or "outcome" in the column explanation.
-- **AI Summary**: Checks if the AI narrative mentions a specific prediction goal.
-- **Fallback**: Defaults to the last column (standard ML convention) if no intelligence is found.
+The system scans meaning keywords, the AI summary, and falls back to standard conventions.
 
 ### The Memory System
-Module 2 includes a `PipelineMemory` class that tracks the success, failure, and duration of every step the AI chose to run. This is returned to the frontend to show the user exactly how their data was "cleaned".
+Module 2 includes a `PipelineMemory` class that tracks the success, failure, and duration of every step.
+
+### Parallelized Execution & Rate Limit Handling
+Module 3A is optimized for speed. Chart generation and insights are processed asynchronously, avoiding UI lag. Complex sequences of LLM requests are managed to prevent hitting API rate limits.
 
 ---
-*Architecture documentation v1.0*
+*Architecture documentation v2.0.1*

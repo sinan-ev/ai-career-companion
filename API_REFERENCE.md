@@ -1,13 +1,13 @@
 # API Reference
 
-The Backend is powered by **FastAPI** and orchestrates two AI-heavy modules. All responses are strictly typed using Pydantic models.
+The Backend is powered by **FastAPI** and orchestrates three AI-heavy modules. All responses are strictly typed using Pydantic models.
 
 ## Endpoints
 
 ### 1. Process Dataset
 `POST /api/process`
 
-Primary endpoint for data analysis. It accepts a file and returns a unified object containing intelligence from both Module 1 and Module 2.
+Primary endpoint for data analysis. It accepts a file and returns a unified object containing intelligence from both Module 1 and Module 2, and prepares the dataset for Module 3A.
 
 **Request Body (Multipart Form):**
 - `file`: .csv or .xlsx file.
@@ -32,11 +32,20 @@ Primary endpoint for data analysis. It accepts a file and returns a unified obje
     "pipeline_steps": [
       { "step": "encoding", "status": "success", "details": "Encoded 3 columns" }
     ]
-  }
+  },
+  "dataset_id": "uuid-string"
 }
 ```
 
-### 2. Health Check
+### 2. Module 3A Endpoints (AI Analyst)
+
+- `POST /api/upload`: Alternative upload point specifically for Module 3A, returns a `dataset_id`.
+- `POST /api/analyze`: Takes `dataset_id`, runs RAG pipeline, and returns `Module3AResult` (charts plan and overall summary).
+- `GET /api/charts/{dataset_id}`: Fetches generated visual charts for the dashboard.
+- `GET /api/insights/{dataset_id}`: Fetches automated analytical insights.
+- `POST /api/chat`: A conversational endpoint with persona-based prompting. Accepts `dataset_id` and `message`, and streams or returns an AI response based on the RAG vector store and dataset context.
+
+### 3. Health Check
 `GET /health`
 
 Used to verify the status of the service and connected models.
@@ -56,6 +65,11 @@ Used to verify the status of the service and connected models.
 - `dataset_outputs`: Info on the two exported datasets (Analytics vs ML).
 - `pipeline_steps`: The "Memory" log of the AI-planned cleaning actions.
 - `artifact_paths`: Paths to the versioned `.pkl` files for production deployment.
+
+### Module3AResult (Module 3A)
+- `charts_plan`: AI-generated JSON defining 5-6 business-focused Plotly charts.
+- `insights`: Narrative explaining the data anomalies and trends.
+- `rag_status`: Status of the vector store initialization.
 
 ## Internal Directory Logic
 - `/exports`: Contains the actual cleaned CSV files served via `/downloads/`.

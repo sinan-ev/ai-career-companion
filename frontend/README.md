@@ -1,16 +1,43 @@
-# React + Vite
+# AI Career Companion Dashboard (React + Vite)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The frontend is a robust, dynamic React application optimized for a premium user experience and seamless integration with the AI Data Intelligence pipeline.
 
-Currently, two official plugins are available:
+## 🎨 Design & Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Dark Mode Aesthetics**: Sleek, glass-morphism components with vibrant color palettes and micro-animations to ensure a premium feel.
+- **Interactive Visualizations**: Leverages **Recharts** and **Plotly** to render dynamic, interactive, AI-planned business charts.
+- **AI Chatbot**: A responsive chat interface connected to the backend RAG store, providing persona-based, jargon-free business intelligence about the uploaded datasets.
+- **Optimized Performance**: State management is handled carefully to prevent unnecessary re-renders (especially UI lag associated with complex data/charts), and the UI seamlessly handles parallel backend processes.
 
-## React Compiler
+## 🚀 Getting Started
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Prerequisites
+- Node.js 18+
+- npm or yarn
 
-## Expanding the ESLint configuration
+### Installation
+```bash
+cd frontend
+npm install
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Running Locally
+```bash
+npm run dev
+```
+
+### Build for Production
+```bash
+npm run build
+```
+
+## 📂 Key Components
+- **`UploadZone`**: The landing area for drag-and-drop file processing, highlighting Module 3A capabilities.
+- **`PipelineView`**: A visual tracer showing how the AI preprocessed the data step-by-step.
+- **`AnalystView`**: The core dashboard for Module 3A containing charts, automated insights, and the AI chatbot.
+
+## 🛠 Technologies
+- React 18, Vite
+- TailwindCSS / Vanilla CSS (with modern variables)
+- Recharts, Plotly.js
+- Lucide React (Icons)
