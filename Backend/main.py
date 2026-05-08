@@ -154,6 +154,10 @@ app.include_router(m3a_charts.router, prefix="/api", tags=["Module 3A"])
 app.include_router(m3a_insights.router, prefix="/api", tags=["Module 3A"])
 app.include_router(m3a_chat.router, prefix="/api", tags=["Module 3A"])
 
+# Mount Module 3B as a sub-application
+from module_3b.api.routes_3b import app as module3b_app
+app.mount("/api/3b", module3b_app)
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

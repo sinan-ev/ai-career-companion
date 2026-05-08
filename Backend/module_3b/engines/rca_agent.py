@@ -1,0 +1,144 @@
+import pandas as pd
+import numpy as np
+from typing import List, Dict, Any
+from lightgbm import LGBMRegressor, LGBMClassifier
+import shap
+from schemas.models import ConfidenceScore
+from ingestion.data_router import route_data
+
+class RCAAgent:
+    def _compute_confidence(self, shap_variance: float) -> ConfidenceScore:
+        try:
+            score = max(0.3, 1.0 - (shap_variance * 10))
+            score = float(np.clip(score, 0.0, 1.0))
+        except Exception:
+            score = 0.5
+            
+        if score >= 0.90:
+            level = "very high"
+            explanation = "Safe to act on this result automatically."
+            suggestions = ["Review the identified top features."]
+        elif score >= 0.75:
+            level = "high"
+            explanation = "Reliable result. Recommend quick human review."
+            suggestions = ["Investigate top causal factors."]
+        elif score >= 0.55:
+            level = "moderate"
+            explanation = "Reasonable result. Validate key assumptions."
+            suggestions = ["Check feature importance stability over time."]
+        elif score >= 0.40:
+            level = "low"
+            explanation = "Uncertain result. Expert review required."
+            suggestions = ["High variance in SHAP analysis. Consult subject matter experts."]
+        else:
+            level = "uncertain"
+            explanation = "Do not act. Collect more data first."
+            suggestions = ["Unstable features. More data needed for reliable RCA."]
+
+        basis = [f"SHAP Variance: {shap_variance:.4f}"]
+        
+        return ConfidenceScore(
+            score=score,
+            level=level,
+            explanation=explanation,
+            basis=basis,
+            suggestions=suggestions
+        )
+
+    def analyse(self, data: List[Dict[str, Any]], target_column: str, problem: str) -> Dict[str, Any]:
+        try:
+            df = route_data(data)
+            
+            if target_column not in df.columns:
+                raise ValueError(f"Target column '{target_column}' not found.")
+                
+            y = df[target_column]
+            X = df.drop(columns=[target_column])
+            
+            # Label encode categoricals
+            for col in X.select_dtypes(include=['object', 'bool', 'category']).columns:
+                X[col] = X[col].astype('category').cat.codes
+                
+            X = X.fillna(X.median())
+            
+            task_type = "classification" if y.nunique() <= 10 else "regression"
+            
+            if task_type == "classification":
+                y = y.astype('category').cat.codes
+                model = LGBMClassifier()
+            else:
+                model = LGBMRegressor()
+                
+            model.fit(X, y)
+            
+            subsets = [
+                X.sample(frac=0.7, random_state=0),
+                X.sample(frac=0.7, random_state=42),
+                X
+            ]
+            
+            shap_results = []
+            
+            for subset in subsets:
+                explainer = shap.TreeExplainer(model)
+                shap_values = explainer.shap_values(subset)
+                
+                if isinstance(shap_values, list): # For multi-class
+                    shap_values = shap_values[1] # Take positive class
+                    
+                mean_abs_shap = np.abs(shap_values).mean(axis=0)
+                shap_results.append(mean_abs_shap)
+                
+            shap_results_arr = np.array(shap_results)
+            mean_importance = shap_results_arr.mean(axis=0)
+            std_importance = shap_results_arr.std(axis=0)
+            
+            feature_importance = pd.DataFrame({
+                'feature': X.columns,
+                'importance': mean_importance,
+                'std': std_importance
+            }).sort_values(by='importance', ascending=False)
+            
+            top_features = feature_importance.head(5).copy()
+            shap_variance = float(top_features['std'].mean() / (top_features['importance'].mean() + 1e-9))
+            
+            top_features_list = []
+            causal_chain = []
+            
+            for i, row in enumerate(top_features.itertuples()):
+                direction = "increases" if row.importance > 0 else "decreases" # Simplified heuristic
+                impact = "high" if i < 2 else ("medium" if i < 4 else "low")
+                
+                top_features_list.append({
+                    "feature": row.feature,
+                    "shap_value": float(row.importance),
+                    "direction": direction,
+                    "impact": impact
+                })
+                
+                causal_chain.append(f"[{row.feature}] {direction} the likelihood of [{problem}] (SHAP: {row.importance:.4f})")
+                
+            top_names = [f["feature"] for f in top_features_list[:3]]
+            explanation = f"The primary drivers of '{problem}' are {', '.join(top_names)}."
+            
+            confidence = self._compute_confidence(shap_variance)
+            
+            return {
+                "top_features": top_features_list,
+                "causal_chain": causal_chain,
+                "explanation": explanation,
+                "confidence": confidence.model_dump()
+            }
+        except Exception as e:
+            return {
+                "top_features": [],
+                "causal_chain": [],
+                "explanation": f"Engine failed: {str(e)}",
+                "confidence": ConfidenceScore(
+                    score=0.0,
+                    level="uncertain",
+                    explanation=f"Engine failed: {str(e)}",
+                    basis=["Exception during execution"],
+                    suggestions=["Check input data format."]
+                ).model_dump()
+            }
