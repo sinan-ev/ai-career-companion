@@ -1,9 +1,13 @@
 import os
+import sys
 import io
 import pandas as pd
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Any
+
+# Ensure module_3b is in the Python path
+sys.path.append(os.path.join(os.path.dirname(__file__), "module_3b"))
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware

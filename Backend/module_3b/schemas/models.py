@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict, Any
 
 class ConfidenceScore(BaseModel):
@@ -46,6 +46,7 @@ class AgentRunRequest(BaseModel):
     problem: str = "Full pipeline analysis"
 
 class PredictionResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
     task_type: str
     model_used: str
     cv_score: float
@@ -54,6 +55,7 @@ class PredictionResponse(BaseModel):
     confidence: ConfidenceScore
 
 class ForecastResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
     model_used: str
     forecast: List[Dict[str, Any]]
     trend_direction: str
