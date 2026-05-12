@@ -23,15 +23,15 @@ class DecisionEngine:
             top_rec_action = recs[0].get("action", "Review full report") if recs else "Review full report"
             
             # Build strings
-            situation = f"Analysis of {total_records} records identified {anomaly_count} anomalies ({anomaly_rate*100:.1f}% anomaly rate). Primary driver: {top_rca_feature}."
-            key_finding = f"The model predicts {task_type} outcomes with {pred_conf_level} confidence. Top risk factor: {top_rca_feature} (SHAP: {shap_val:.4f})."
+            situation = f"Out of {total_records} records processed, we detected {anomaly_count} potential risks/anomalies ({anomaly_rate*100:.1f}% anomaly rate). The primary driving factor influencing this dataset is {top_rca_feature}."
+            key_finding = f"Our AI predictive model reached a '{pred_conf_level}' confidence level. {top_rca_feature} was identified as the highest impact variable."
             strategic_decision = top_rec_action
             
             action_plan = [
                 f"Step 1: {top_rec_action}",
-                f"Step 2: Investigate {top_rca_feature} — primary root cause",
-                f"Step 3: Review {anomaly_count} flagged anomalous records",
-                "Step 4: Re-evaluate pipeline after implementing Step 1"
+                f"Step 2: Deep-dive into {top_rca_feature} as it's the primary driver",
+                f"Step 3: Audit the {anomaly_count} flagged outlier records",
+                "Step 4: Implement strategy and re-run analysis in 30 days"
             ]
             
             executive_summary = f"{situation} {key_finding} Recommended action: {strategic_decision}."

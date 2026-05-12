@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, FileText, X, Zap, Database, Shield, Brain, BarChart3 } from 'lucide-react';
+import { Upload, FileText, X, Zap, Database, Shield, Brain, BarChart3, Target, TrendingUp } from 'lucide-react';
 
 const UploadZone = ({ onUpload }) => {
   const [dragActive, setDragActive] = useState(false);
@@ -49,10 +49,10 @@ const UploadZone = ({ onUpload }) => {
   };
 
   const features = [
-    { icon: Brain, label: "AI Understanding", desc: "Deep schema analysis" },
-    { icon: Database, label: "Smart Cleaning", desc: "Auto imputation & encoding" },
-    { icon: Shield, label: "Quality Scoring", desc: "A–F data quality grade" },
-    { icon: BarChart3, label: "AI Analyst", desc: "Auto-dashboards & insights" },
+    { icon: Brain, label: "Mod 1: AI Understanding", desc: "Schema, cleaning, quality" },
+    { icon: Database, label: "Mod 2: Data Engineering", desc: "Auto ML-ready datasets" },
+    { icon: BarChart3, label: "Mod 3A: AI Analyst", desc: "Chat, Dashboards & Insights" },
+    { icon: TrendingUp, label: "Mod 3B: Decision Intel", desc: "Predictions, Forecasts & RCA" },
   ];
 
   return (

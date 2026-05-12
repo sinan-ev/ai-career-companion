@@ -1,3 +1,27 @@
+# Historical Data
+#     ↓
+# Date Parsing
+#     ↓
+# Train/Validation Split
+#     ↓
+# Prophet Forecasting
+#     ↓
+# ARIMA Forecasting
+#     ↓
+# Model Validation
+#     ↓
+# Ensemble Weight Calculation
+#     ↓
+# Future Forecast Generation
+#     ↓
+# Trend Detection
+#     ↓
+# Confidence Calculation
+#     ↓
+# Final Forecast Report
+
+
+
 import pandas as pd
 import numpy as np
 from typing import List, Dict, Any

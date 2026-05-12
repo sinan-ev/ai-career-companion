@@ -17,8 +17,10 @@ import {
   Brain,
   Lightbulb,
   ArrowLeft,
+  TrendingUp,
 } from 'lucide-react';
 import AnalystView from './AnalystView';
+import DecisionIntelligenceView from './DecisionIntelligenceView';
 import {
   BarChart,
   Bar,
@@ -40,13 +42,17 @@ const BACKEND_URL = 'http://127.0.0.1:8000';
 const Dashboard = ({ data, onReset }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [analystLoaded, setAnalystLoaded] = useState(false);
+  const [diLoaded, setDiLoaded] = useState(false);
 
   if (!data) return null;
   
-  // Lazy load AnalystView
+  // Lazy load AnalystView and DecisionIntelligenceView
   React.useEffect(() => {
     if (activeTab === 'analyst') {
       setAnalystLoaded(true);
+    }
+    if (activeTab === 'insights' || activeTab === 'solutions') {
+      setDiLoaded(true);
     }
   }, [activeTab]);
 
@@ -63,6 +69,8 @@ const Dashboard = ({ data, onReset }) => {
     { id: 'quality',   label: 'Quality',    icon: ShieldCheck },
     { id: 'exports',   label: 'Exports',    icon: FileDown },
     { id: 'analyst',   label: 'AI Analyst', icon: Brain },
+    { id: 'insights',  label: 'Future Insights', icon: TrendingUp },
+    { id: 'solutions', label: 'Solutions', icon: Lightbulb },
   ];
 
   // ─── Quality score color ───
@@ -459,6 +467,17 @@ const Dashboard = ({ data, onReset }) => {
         {analystLoaded && (
           <div className="tab-content animate-fade-in" style={{ height: '100%', display: activeTab === 'analyst' ? 'flex' : 'none' }}>
             <AnalystView datasetId={data.dataset_id} module1Data={module1} />
+          </div>
+        )}
+
+        {diLoaded && (
+          <div className="tab-content animate-fade-in" style={{ height: '100%', display: (activeTab === 'insights' || activeTab === 'solutions') ? 'flex' : 'none', overflow: 'hidden' }}>
+            <DecisionIntelligenceView 
+              data={outputs.sample_data} 
+              targetColumn={outputs.target_column} 
+              featureColumns={outputs.feature_columns}
+              activeView={activeTab}
+            />
           </div>
         )}
       </main>

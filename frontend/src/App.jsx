@@ -3,7 +3,7 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import UploadZone from './components/UploadZone';
 import Dashboard from './components/Dashboard';
-import { Loader2, Database, Brain, Sparkles, ShieldCheck, Layers } from 'lucide-react';
+import { Loader2, Database, Brain, Sparkles, ShieldCheck, Layers, Target, TrendingUp } from 'lucide-react';
 
 const API_URL = "http://127.0.0.1:8000/api/process";
 
@@ -13,6 +13,8 @@ const pipelinePhases = [
   { icon: Sparkles, label: 'AI planning pipeline...', detail: 'Choosing optimal cleaning & encoding strategy' },
   { icon: Layers, label: 'Executing pipeline...', detail: 'Imputing, encoding, scaling — building ML-ready dataset' },
   { icon: ShieldCheck, label: 'Assembling results...', detail: 'Packaging datasets, artifacts, and quality report' },
+  { icon: Target, label: 'AI Analyst Generation (Mod 3A)...', detail: 'Extracting strategic insights and natural language reports' },
+  { icon: TrendingUp, label: 'Decision Intelligence Prep (Mod 3B)...', detail: 'Readying AutoML predictive pipelines and RCA structures' },
 ];
 
 function App() {

@@ -1,4 +1,4 @@
-import numpy as pd
+import numpy as np
 import pandas as pd
 from typing import List, Dict, Any
 from sklearn.model_selection import train_test_split, cross_val_score
@@ -146,7 +146,7 @@ class PredictionEngine:
             else:
                 metrics = {
                     "mae": mean_absolute_error(y_test, y_pred),
-                    "rmse": mean_squared_error(y_test, y_pred, squared=False),
+                    "rmse": mean_squared_error(y_test, y_pred) ** 0.5,
                     "r2": r2_score(y_test, y_pred)
                 }
                 actuals = y_test.values

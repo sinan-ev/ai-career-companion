@@ -85,8 +85,13 @@ class RCAAgent:
                 
                 if isinstance(shap_values, list): # For multi-class
                     shap_values = shap_values[1] # Take positive class
+                elif len(shap_values.shape) > 2:
+                    # Take mean across classes
+                    shap_values = np.abs(shap_values).mean(axis=-1)
                     
                 mean_abs_shap = np.abs(shap_values).mean(axis=0)
+                if len(mean_abs_shap.shape) > 1:
+                    mean_abs_shap = mean_abs_shap.mean(axis=1)
                 shap_results.append(mean_abs_shap)
                 
             shap_results_arr = np.array(shap_results)
@@ -106,17 +111,27 @@ class RCAAgent:
             causal_chain = []
             
             for i, row in enumerate(top_features.itertuples()):
-                direction = "increases" if row.importance > 0 else "decreases" # Simplified heuristic
+                # Improved heuristics for a business user
+                importance_val = float(row.importance)
+                if abs(importance_val) < 0.0001:
+                    direction = "influences"
+                else:
+                    direction = "increases" if importance_val > 0 else "decreases"
+                
                 impact = "high" if i < 2 else ("medium" if i < 4 else "low")
                 
                 top_features_list.append({
                     "feature": row.feature,
-                    "shap_value": float(row.importance),
+                    "shap_value": importance_val,
                     "direction": direction,
                     "impact": impact
                 })
                 
-                causal_chain.append(f"[{row.feature}] {direction} the likelihood of [{problem}] (SHAP: {row.importance:.4f})")
+                # Make text business-friendly:
+                if task_type == "classification":
+                    causal_chain.append(f"Higher values of {row.feature} {direction} the likelihood of {target_column}")
+                else:
+                    causal_chain.append(f"Higher values of {row.feature} {direction} the expected {target_column}")
                 
             top_names = [f["feature"] for f in top_features_list[:3]]
             explanation = f"The primary drivers of '{problem}' are {', '.join(top_names)}."

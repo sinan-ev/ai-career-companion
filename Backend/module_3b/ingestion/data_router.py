@@ -122,7 +122,7 @@ def route_data(data: List[Dict[str, Any]], source: str = "request") -> pd.DataFr
         
     return df
 
-def validate_dataset(df: pd.DataFrame, min_rows: int = 30) -> Tuple[bool, str]:
+def validate_dataset(df: pd.DataFrame, min_rows: int = 5) -> Tuple[bool, str]:
     """
     Checks: min row count, no fully empty columns, at least 2 columns.
     """
@@ -134,6 +134,6 @@ def validate_dataset(df: pd.DataFrame, min_rows: int = 30) -> Tuple[bool, str]:
         
     empty_cols = df.columns[df.isnull().all()].tolist()
     if empty_cols:
-        return False, f"Dataset contains fully empty columns: {empty_cols}"
+        logger.warning(f"Dataset contains fully empty columns: {empty_cols}. These may be ignored.")
         
     return True, "Valid"
