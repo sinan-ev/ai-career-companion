@@ -1,56 +1,33 @@
 from typing import List, Dict, Any
 from schemas.models import ConfidenceScore
+from utils.llm_client import LLMClient
+import json
 
 class RecommendationEngine:
     RULES: List[Dict[str, Any]] = [
         {
             "id": 1, "condition_field": "risk_score", "condition_op": ">", "threshold": 70,
-            "action": "Immediate anomaly audit required", "rationale": "High risk score indicates severe data issues.",
+            "action": "Conduct Immediate Data Quality Audit", "rationale": "High risk score indicates severe data anomalies affecting insights.",
             "priority": "CRITICAL", "domain": "operations", "expected_impact": "High"
         },
         {
             "id": 2, "condition_field": "risk_score", "condition_op": ">", "threshold": 40,
-            "action": "Investigate flagged records", "rationale": "Moderate risk score suggests some data anomalies.",
-            "priority": "HIGH", "domain": "data quality", "expected_impact": "Medium"
+            "action": "Review Outlier Transactions", "rationale": "Moderate risk score suggests some anomalous data points.",
+            "priority": "HIGH", "domain": "operations", "expected_impact": "Medium"
         },
         {
             "id": 3, "condition_field": "prediction_confidence", "condition_op": "<", "threshold": 0.55,
-            "action": "Collect 200+ more labelled samples", "rationale": "Low prediction confidence requires more training data.",
-            "priority": "HIGH", "domain": "ml", "expected_impact": "High"
+            "action": "Gather More Historical Data Before Executing Strategy", "rationale": "The predictive trend has high uncertainty and needs more historical context to be reliable.",
+            "priority": "HIGH", "domain": "business", "expected_impact": "High"
         },
         {
-            "id": 4, "condition_field": "prediction_confidence", "condition_op": "<", "threshold": 0.40,
-            "action": "Do not use predictions — retrain first", "rationale": "Prediction confidence is too low for safe use.",
-            "priority": "CRITICAL", "domain": "ml", "expected_impact": "High"
+            "id": 4, "condition_field": "top_risk_features", "condition_op": "!=", "threshold": [],
+            "action": "Optimize Business Operations around {top_feature}", "rationale": "This is the primary variable driving changes in your target outcomes.",
+            "priority": "MEDIUM", "domain": "strategy", "expected_impact": "High"
         },
         {
-            "id": 5, "condition_field": "anomaly_rate", "condition_op": ">", "threshold": 0.10,
-            "action": "Review data collection pipeline", "rationale": "Anomaly rate exceeds 10%, indicating pipeline issues.",
-            "priority": "HIGH", "domain": "data quality", "expected_impact": "High"
-        },
-        {
-            "id": 6, "condition_field": "anomaly_rate", "condition_op": ">", "threshold": 0.20,
-            "action": "Halt automated decisions pending review", "rationale": "Severe anomaly rate ( > 20%) requires manual intervention.",
-            "priority": "CRITICAL", "domain": "operations", "expected_impact": "High"
-        },
-        {
-            "id": 7, "condition_field": "risk_score", "condition_op": "<", "threshold": 10,
-            "action": "Data quality is healthy — proceed", "rationale": "Risk score is low, data is safe to use.",
-            "priority": "LOW", "domain": "operations", "expected_impact": "Low"
-        },
-        {
-            "id": 8, "condition_field": "prediction_confidence", "condition_op": ">", "threshold": 0.85,
-            "action": "Confidence is high — safe to automate", "rationale": "High prediction confidence allows automation.",
-            "priority": "LOW", "domain": "ml", "expected_impact": "High"
-        },
-        {
-            "id": 9, "condition_field": "top_risk_features", "condition_op": "!=", "threshold": [],
-            "action": "Deep-dive feature [{top_feature}] — top risk driver", "rationale": "Key feature identified as primary risk driver.",
-            "priority": "MEDIUM", "domain": "analysis", "expected_impact": "Medium"
-        },
-        {
-            "id": 10, "condition_field": "general", "condition_op": "==", "threshold": "always",
-            "action": "Review executive report for full insights", "rationale": "General review recommended for all analyses.",
+            "id": 5, "condition_field": "general", "condition_op": "==", "threshold": "always",
+            "action": "Review comprehensive AI strategy report", "rationale": "Align team on the generated insights before implementation.",
             "priority": "LOW", "domain": "general", "expected_impact": "Low"
         }
     ]
@@ -115,6 +92,43 @@ class RecommendationEngine:
             elif overall_score >= 0.40: level = "low"
             else: level = "uncertain"
 
+            # --- LLM Strategic Recommendations ---
+            llm_recommendations = []
+            try:
+                llm = LLMClient()
+                system_prompt = (
+                    "You are a Chief Strategy Officer AI. Based on the insights from the analytics platform, "
+                    "provide 3 highly strategic, actionable business recommendations that directly address how to improve the target outcome. "
+                    "For example, if sales are influenced by a certain factor, explain what exact strategy the business should take to leverage or mitigate it to improve upcoming sales. "
+                    "Make it easily understandable for non-technical users. "
+                    "Output MUST be valid JSON in the format: {\"recommendations\": [{\"action\": \"Clear business strategy title\", \"rationale\": \"Why this strategy works and how it improves outcomes\", \"expected_impact\": \"High/Medium/Low\"}]}"
+                )
+                user_prompt = (
+                    f"Platform Insights summary:\n"
+                    f"- Prediction Confidence: {prediction_confidence}\n"
+                    f"- Risk Score: {risk_score}\n"
+                    f"- Top Influential Factors (Drivers): {', '.join(top_risk_features)}\n"
+                    f"- Context Insights: {insights}\n\n"
+                    "Generate 3 forward-looking business strategies to optimize the target metric based on these drivers."
+                )
+                llm_res = llm.generate(system_prompt, user_prompt, require_json=True)
+                llm_parsed = json.loads(llm_res)
+                
+                for i, rec in enumerate(llm_parsed.get("recommendations", [])):
+                    llm_recommendations.append({
+                        "action": rec.get("action", f"Strategic Action {i+1}"),
+                        "rationale": rec.get("rationale", "LLM-based rationale"),
+                        "priority": "STRATEGIC",
+                        "domain": "business",
+                        "expected_impact": rec.get("expected_impact", "High"),
+                        "confidence_score": overall_score
+                    })
+            except Exception as e:
+                pass
+                
+            # Combine LLM and rule-based recommendations
+            final_recommendations = llm_recommendations + recommendations
+
             confidence = ConfidenceScore(
                 score=overall_score,
                 level=level,
@@ -124,7 +138,7 @@ class RecommendationEngine:
             )
             
             return {
-                "recommendations": recommendations,
+                "recommendations": final_recommendations,
                 "confidence": confidence.model_dump()
             }
         except Exception as e:

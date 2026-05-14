@@ -1,17 +1,17 @@
-# Unified Data Intelligence & Cleaning Agent (v2.0.1)
+# End-to-End AI Decision Intelligence Platform
 
-A professional‑grade, AI‑powered platform that transforms raw spreadsheets into actionable insights, ML‑ready datasets, and a polished interactive dashboard.
+A professional‑grade, AI‑powered platform that transforms raw datasets into actionable present-state analytics, human-readable insights, ML‑ready datasets, and future-focused strategic AI decisions.
 
-## 🚀 New Features (v2.0.1)
+## 🚀 New Features (v3.0.0)
 
-- **Module 3‑A (AI Analyst)** – End‑to‑end pipeline that:
-  - Builds a Retrieval‑Augmented Generation (RAG) vector store from the EDA report.
-  - Uses `llama‑3.1‑8b‑instant` to **plan 5‑6 business‑focused charts**.
-  - Generates concise insights, a narrative explanation, and a **RAG‑backed chatbot**.
-  - Returns a `Module3AResult` JSON consumed by the React dashboard.
-- **Upload Page Enhancements** – The upload zone now shows a concise overview of Module 3‑A capabilities.
-- **Pipeline View** – Visual representation of the AI‑orchestrated preprocessing steps plus a highlighted Module 3‑A overview.
-- **Robust Model Handling** – Updated token budget (`max_tokens=2048`) and strict JSON response format.
+- **Module 1 (Data Understanding)** – Automatically understands dataset structure, business context, column types, and target information.
+- **Module 2 (Intelligent Processing)** – Separates data into human-readable format for visualization and an ML-ready encoded dataset.
+- **Module 3A (Present-State Analytics)** – Generates visualizations, KPI insights, trends, and RAG-backed chatbot interactions using human-readable data.
+- **Module 3B (Future Intelligence)** – End-to-end predictive pipeline that:
+  - Runs AutoML for predictions and forecasting to generate future datasets.
+  - Converts technical ML outputs into business-understandable future insights (explaining why changes happen, business factors).
+  - Performs AI-driven Root Cause Analysis (RCA) and generates strategic actionable solutions via LLM reasoning.
+  - Integrates a **Future-Focused Chat Assistant** to interact with prediction outputs and recommended strategies in natural language.
 
 ## 🛠 Tech Stack
 
@@ -32,8 +32,9 @@ A professional‑grade, AI‑powered platform that transforms raw spreadsheets i
 ├── Backend/
 │   ├── main.py                # Unified API entry point
 │   ├── module1/               # Data understanding (schema, column meanings)
-│   ├── module2/               # Advanced EDA & preprocessing
-│   ├── module3a/              # AI Analyst – RAG, chart engine, insights, chatbot
+│   ├── module2/               # Advanced EDA, preprocessing, and dataset splitting
+│   ├── module3a/              # Present-state analytics (charts, insights, RAG chatbot)
+│   ├── module_3b/             # Future intelligence (AutoML, RCA, strategy engine, business chat)
 │   └── exports/               # Generated CSVs & artifacts
 ├── frontend/
 │   ├── src/components/        # UploadZone, AnalystView, PipelineView, etc.

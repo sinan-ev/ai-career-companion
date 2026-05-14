@@ -3,7 +3,7 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Brain, Target, TrendingUp, AlertTriangle, CheckCircle, 
-  Lightbulb, Activity, ArrowRight, ShieldCheck, Download, LineChart as LineChartIcon, Sparkles
+  Lightbulb, Activity, ArrowRight, ShieldCheck, Download, LineChart as LineChartIcon, Sparkles, MessageSquare, X, Send
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell,
@@ -16,6 +16,44 @@ const DecisionIntelligenceView = ({ data, targetColumn, featureColumns, activeVi
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const [chatMessages, setChatMessages] = useState([
+    { role: 'ai', text: 'Hello! I am your Future Intelligence Assistant. I can help explain the predicted datasets, business insights, and recommend strategic actions. What would you like to know?' }
+  ]);
+  const [isTyping, setIsTyping] = useState(false);
+  const chatBodyRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (chatBodyRef.current) {
+      chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight;
+    }
+  }, [chatMessages, isTyping]);
+
+  const handleChatSubmit = async (e) => {
+    e.preventDefault();
+    if(!chatInput.trim()) return;
+    
+    const message = chatInput;
+    const userMsg = { role: 'user', text: message };
+    setChatMessages(prev => [...prev, userMsg]);
+    setChatInput('');
+    setIsTyping(true);
+    
+    try {
+      const response = await axios.post("http://127.0.0.1:8000/api/3b/chat", {
+        message: message,
+        context: result || {}
+      });
+      setChatMessages(prev => [...prev, { role: 'ai', text: response.data.response }]);
+    } catch (err) {
+      console.error("Chat error:", err);
+      setChatMessages(prev => [...prev, { role: 'ai', text: "Sorry, I'm having trouble connecting to the intelligence engine right now." }]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
   
   // Auto-configuration
   const autoProblem = `Analyze the dataset, predict ${targetColumn || 'the primary outcome'}, find root causes, and provide strategic recommendations.`;
@@ -173,6 +211,12 @@ const DecisionIntelligenceView = ({ data, targetColumn, featureColumns, activeVi
               {overall_confidence?.level?.toUpperCase()} ({Math.round((overall_confidence?.score || 0) * 100)}%)
             </strong>
           </div>
+          <button 
+            onClick={() => setIsChatOpen(true)}
+            className="di-chat-toggle-btn"
+          >
+            <MessageSquare size={16} /> Chat with AI
+          </button>
         </div>
       </div>
 
@@ -186,7 +230,7 @@ const DecisionIntelligenceView = ({ data, targetColumn, featureColumns, activeVi
                   <div className="di-card-header">
                     <div className="title-group">
                       <Target size={20} color="var(--primary)" />
-                      <h3>Predictions & ML Accuracy</h3>
+                      <h3>Predictions & Business Accuracy</h3>
                     </div>
                   </div>
                   <div className="di-card-body">
@@ -201,7 +245,7 @@ const DecisionIntelligenceView = ({ data, targetColumn, featureColumns, activeVi
                         <span className="metric-value">{prediction.model_used}</span>
                       </div>
                       <div className="metric-box">
-                        <span className="metric-label">Validation Score</span>
+                        <span className="metric-label">Business Confidence Score</span>
                         <span className="metric-value highlight">{prediction.task_type === 'classification' ? (prediction.cv_score * 100).toFixed(1) + '%' : (Math.max(0, prediction.metrics?.r2 || 0)).toFixed(2) + ' R²'}</span>
                       </div>
                     </div>
@@ -276,7 +320,7 @@ const DecisionIntelligenceView = ({ data, targetColumn, featureColumns, activeVi
                     <h3>Risk & Anomaly Detection</h3>
                   </div>
                   <div className="risk-score-badge">
-                    Risk Score: <strong style={{ color: risk.risk_score > 50 ? '#ef4444' : '#f59e0b'}}>{risk.risk_score.toFixed(1)}</strong>
+                    Risk Score: <strong style={{ color: (risk.risk_score || 0) > 50 ? '#ef4444' : '#f59e0b'}}>{(risk.risk_score || 0).toFixed(1)}</strong>
                   </div>
                 </div>
                 <div className="di-card-body">
@@ -284,7 +328,7 @@ const DecisionIntelligenceView = ({ data, targetColumn, featureColumns, activeVi
                     <div>
                       <ConfidenceBadge confidence={risk.confidence} />
                       <ul className="alert-list">
-                        {risk.alerts.map((alert, idx) => (
+                        {(risk.alerts || []).map((alert, idx) => (
                           <li key={idx}><AlertTriangle size={14} color="#f59e0b" /> {alert}</li>
                         ))}
                       </ul>
@@ -292,15 +336,15 @@ const DecisionIntelligenceView = ({ data, targetColumn, featureColumns, activeVi
                     <div className="anomaly-stats">
                       <div className="stat-row">
                         <span>Total Records Checked</span>
-                        <strong>{risk.total_records}</strong>
+                        <strong>{risk.total_records || 0}</strong>
                       </div>
                       <div className="stat-row">
                         <span>Anomalies Detected</span>
-                        <strong style={{ color: '#ef4444'}}>{risk.anomaly_count}</strong>
+                        <strong style={{ color: '#ef4444'}}>{risk.anomaly_count || 0}</strong>
                       </div>
                       <div className="stat-row">
                         <span>Anomaly Rate</span>
-                        <strong>{(risk.anomaly_rate * 100).toFixed(1)}%</strong>
+                        <strong>{((risk.anomaly_rate || 0) * 100).toFixed(1)}%</strong>
                       </div>
                     </div>
                   </div>
@@ -343,7 +387,7 @@ const DecisionIntelligenceView = ({ data, targetColumn, featureColumns, activeVi
                   <div className="action-plan">
                     <h4>Recommended Action Plan</h4>
                     <ul>
-                      {decision.action_plan.map((step, idx) => (
+                      {(decision.action_plan || []).map((step, idx) => (
                         <li key={idx}>
                           <div className="step-num">{idx + 1}</div>
                           <p>{step}</p>
@@ -372,18 +416,18 @@ const DecisionIntelligenceView = ({ data, targetColumn, featureColumns, activeVi
                     <div className="causal-chain">
                       <h4>Causal Chain</h4>
                       <div className="chain-flow">
-                        {rca.causal_chain.map((link, idx) => (
+                        {(rca.causal_chain || []).map((link, idx) => (
                           <React.Fragment key={idx}>
                             <div className="chain-node">{link}</div>
-                            {idx < rca.causal_chain.length - 1 && <ArrowRight size={14} color="var(--text-muted)" />}
+                            {idx < (rca.causal_chain || []).length - 1 && <ArrowRight size={14} color="var(--text-muted)" />}
                           </React.Fragment>
                         ))}
                       </div>
                     </div>
 
                     <div className="top-features mt-4">
-                      <h4>Top Contributing Factors</h4>
-                      {rca.top_features.map((feat, idx) => (
+                      <h4>Key Business Drivers</h4>
+                      {(rca.top_features || []).map((feat, idx) => (
                         <div key={idx} className="feature-bar-row">
                           <span className="feature-name">{feat.feature}</span>
                           <div className="feature-bar-bg">
@@ -392,7 +436,7 @@ const DecisionIntelligenceView = ({ data, targetColumn, featureColumns, activeVi
                               style={{ width: `${Math.min(100, Math.abs(feat.shap_value) * 100)}%`, background: feat.shap_value > 0 ? '#ef4444' : '#10b981' }} 
                             />
                           </div>
-                          <span className="feature-val">{feat.shap_value.toFixed(2)}</span>
+                          <span className="feature-val" title="Impact Score">{Math.abs(feat.shap_value).toFixed(2)}</span>
                         </div>
                       ))}
                     </div>
@@ -412,7 +456,7 @@ const DecisionIntelligenceView = ({ data, targetColumn, featureColumns, activeVi
                   <div className="di-card-body">
                     <ConfidenceBadge confidence={recommendation.confidence} />
                     <div className="recs-list">
-                      {recommendation.recommendations.map((rec, idx) => (
+                      {(recommendation.recommendations || []).map((rec, idx) => (
                         <div key={idx} className="rec-item">
                           <div className="rec-icon"><Lightbulb size={16} color="#f59e0b" /></div>
                           <div className="rec-content">
@@ -427,6 +471,60 @@ const DecisionIntelligenceView = ({ data, targetColumn, featureColumns, activeVi
               )}
             </div>
 
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Chat Assistant Overlay */}
+      <AnimatePresence>
+        {isChatOpen && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            className="di-chat-assistant glass-card"
+          >
+            <div className="di-chat-header">
+              <div className="chat-title">
+                <Brain size={18} color="var(--primary)" />
+                <h4>Future Intelligence Assistant</h4>
+              </div>
+              <button onClick={() => setIsChatOpen(false)} className="close-btn"><X size={18} /></button>
+            </div>
+            
+            <div className="di-chat-body" ref={chatBodyRef}>
+              {chatMessages.map((msg, i) => (
+                <div key={i} className={`chat-bubble ${msg.role}`}>
+                  <div className="chat-avatar">
+                    {msg.role === 'ai' ? <Brain size={14} color="white" /> : 'U'}
+                  </div>
+                  <div className="chat-text" style={{ whiteSpace: "pre-line" }}>{msg.text}</div>
+                </div>
+              ))}
+              {isTyping && (
+                <div className="chat-bubble ai">
+                  <div className="chat-avatar">
+                    <Brain size={14} color="white" />
+                  </div>
+                  <div className="chat-text typing-indicator">
+                    <span></span><span></span><span></span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <form onSubmit={handleChatSubmit} className="di-chat-input-area">
+              <input 
+                type="text" 
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                placeholder="Ask about the predictions or insights..."
+                className="chat-input"
+              />
+              <button type="submit" className="chat-send-btn" disabled={!chatInput.trim()}>
+                <Send size={16} />
+              </button>
+            </form>
           </motion.div>
         )}
       </AnimatePresence>
@@ -918,6 +1016,196 @@ const DecisionIntelligenceView = ({ data, targetColumn, featureColumns, activeVi
           color: var(--text-dim);
           line-height: 1.5;
         }
+
+        /* Chat Assistant Styles */
+        .di-chat-toggle-btn {
+          background: rgba(99, 102, 241, 0.15);
+          border: 1px solid rgba(99, 102, 241, 0.3);
+          color: var(--primary);
+          padding: 8px 16px;
+          border-radius: var(--radius-full);
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-weight: 600;
+          font-size: 13px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .di-chat-toggle-btn:hover {
+          background: rgba(99, 102, 241, 0.25);
+          transform: translateY(-1px);
+        }
+
+        .di-chat-assistant {
+          position: fixed;
+          bottom: 24px;
+          right: 24px;
+          width: 380px;
+          height: 500px;
+          border-radius: var(--radius-lg);
+          display: flex;
+          flex-direction: column;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+          border: 1px solid rgba(255,255,255,0.1);
+          background: rgba(15, 23, 42, 0.85);
+          backdrop-filter: blur(20px);
+          z-index: 100;
+          overflow: hidden;
+        }
+        
+        .di-chat-header {
+          padding: 16px;
+          background: rgba(0,0,0,0.3);
+          border-bottom: 1px solid rgba(255,255,255,0.05);
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .chat-title {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .chat-title h4 {
+          margin: 0;
+          font-size: 14px;
+          font-weight: 600;
+        }
+        .close-btn {
+          background: transparent;
+          border: none;
+          color: var(--text-muted);
+          cursor: pointer;
+          padding: 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: var(--radius-sm);
+        }
+        .close-btn:hover {
+          background: rgba(255,255,255,0.1);
+          color: white;
+        }
+
+        .di-chat-body {
+          flex: 1;
+          padding: 16px;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .chat-bubble {
+          display: flex;
+          gap: 12px;
+          max-width: 90%;
+        }
+        .chat-bubble.ai {
+          align-self: flex-start;
+        }
+        .chat-bubble.user {
+          align-self: flex-end;
+          flex-direction: row-reverse;
+        }
+        
+        .chat-avatar {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          background: var(--primary);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          font-size: 12px;
+          font-weight: bold;
+        }
+        .chat-bubble.user .chat-avatar {
+          background: rgba(255,255,255,0.1);
+        }
+
+        .chat-text {
+          background: rgba(0,0,0,0.3);
+          padding: 12px 14px;
+          border-radius: 12px;
+          font-size: 13px;
+          line-height: 1.5;
+          color: var(--text);
+        }
+        .chat-bubble.ai .chat-text {
+          border-top-left-radius: 2px;
+          background: rgba(99, 102, 241, 0.1);
+          border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+        .chat-bubble.user .chat-text {
+          border-top-right-radius: 2px;
+          background: rgba(255,255,255,0.05);
+        }
+
+        .di-chat-input-area {
+          padding: 16px;
+          border-top: 1px solid rgba(255,255,255,0.05);
+          display: flex;
+          gap: 8px;
+          background: rgba(0,0,0,0.2);
+        }
+        .chat-input {
+          flex: 1;
+          background: rgba(0,0,0,0.3);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: var(--radius-full);
+          padding: 10px 16px;
+          color: white;
+          font-size: 13px;
+          outline: none;
+        }
+        .chat-input:focus {
+          border-color: var(--primary);
+        }
+        .chat-send-btn {
+          width: 38px;
+          height: 38px;
+          border-radius: 50%;
+          background: var(--primary);
+          color: white;
+          border: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+        .chat-send-btn:disabled {
+          background: rgba(255,255,255,0.1);
+          color: var(--text-muted);
+          cursor: not-allowed;
+        }
+        .chat-send-btn:not(:disabled):hover {
+          background: var(--accent);
+        }
+        
+        .typing-indicator {
+          display: flex;
+          gap: 4px;
+          align-items: center;
+          padding: 14px 18px !important;
+        }
+        .typing-indicator span {
+          width: 6px;
+          height: 6px;
+          background-color: var(--text-dim);
+          border-radius: 50%;
+          animation: typing 1.4s infinite ease-in-out both;
+        }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing {
+          0%, 80%, 100% { transform: scale(0); }
+          40% { transform: scale(1); }
+        }
+
       `}</style>
     </div>
   );

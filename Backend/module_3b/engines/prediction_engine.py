@@ -97,14 +97,14 @@ class PredictionEngine:
                 
                 models = {
                     "XGBClassifier": XGBClassifier(use_label_encoder=False, eval_metric='logloss'),
-                    "LGBMClassifier": LGBMClassifier(),
+                    "LGBMClassifier": LGBMClassifier(verbose=-1),
                     "RandomForestClassifier": RandomForestClassifier(random_state=42)
                 }
                 scoring = 'accuracy'
             else:
                 models = {
                     "XGBRegressor": XGBRegressor(),
-                    "LGBMRegressor": LGBMRegressor(),
+                    "LGBMRegressor": LGBMRegressor(verbose=-1),
                     "RandomForestRegressor": RandomForestRegressor(random_state=42)
                 }
                 scoring = 'neg_mean_absolute_error'

@@ -5,6 +5,8 @@ from lightgbm import LGBMRegressor, LGBMClassifier
 import shap
 from schemas.models import ConfidenceScore
 from ingestion.data_router import route_data
+from utils.llm_client import LLMClient
+import json
 
 class RCAAgent:
     def _compute_confidence(self, shap_variance: float) -> ConfidenceScore:
@@ -134,14 +136,39 @@ class RCAAgent:
                     causal_chain.append(f"Higher values of {row.feature} {direction} the expected {target_column}")
                 
             top_names = [f["feature"] for f in top_features_list[:3]]
-            explanation = f"The primary drivers of '{problem}' are {', '.join(top_names)}."
+            technical_explanation = f"The primary drivers of '{problem}' are {', '.join(top_names)}."
+            
+            # --- LLM Business Translation ---
+            llm = LLMClient()
+            system_prompt = (
+                "You are a Chief Strategy Officer AI. "
+                "Your job is to translate technical SHAP-based feature importance into actionable, "
+                "business-understandable insights. "
+                "Instead of just listing features, explain WHY these specific factors will cause the target metric (e.g. Sales) "
+                "to increase or decrease in the upcoming forecast period. "
+                "Provide a cohesive, forward-looking narrative that non-technical users can easily understand. "
+                "Output MUST be in valid JSON format with a single key 'business_explanation' containing a string (2-4 sentences)."
+            )
+            user_prompt = (
+                f"Business Objective / Problem: {problem}\n"
+                f"Target Metric being Forecasted: {target_column}\n"
+                f"Technical Causal Chain (SHAP derived):\n" + "\n".join(causal_chain) + "\n\n"
+                "Please provide the strategic business explanation. Focus on WHY this happens and WHAT it means for upcoming trends."
+            )
+            
+            try:
+                llm_response = llm.generate(system_prompt, user_prompt, require_json=True)
+                business_explanation = json.loads(llm_response).get("business_explanation", technical_explanation)
+            except Exception:
+                business_explanation = technical_explanation
             
             confidence = self._compute_confidence(shap_variance)
             
             return {
                 "top_features": top_features_list,
                 "causal_chain": causal_chain,
-                "explanation": explanation,
+                "explanation": business_explanation,
+                "technical_explanation": technical_explanation,
                 "confidence": confidence.model_dump()
             }
         except Exception as e:

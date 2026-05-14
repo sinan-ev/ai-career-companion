@@ -100,3 +100,10 @@ class AgentRunResponse(BaseModel):
     overall_confidence: ConfidenceScore
     final_report: str
     errors: List[str]
+
+class ChatRequest(BaseModel):
+    message: str
+    context: Dict[str, Any]
+
+class ChatResponse(BaseModel):
+    response: str

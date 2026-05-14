@@ -9,6 +9,7 @@ from engines.rca_agent import RCAAgent
 from engines.risk_engine import RiskEngine
 from engines.recommendation_engine import RecommendationEngine
 from engines.decision_engine import DecisionEngine
+from engines.chat_agent import ChatAgent
 from agents.agent_runner import run_pipeline
 from explainability.xai_layer import XAILayer
 from monitoring.model_monitor import ModelMonitor
@@ -40,7 +41,7 @@ async def root():
         "available_routes": [
             "/health", "/predict", "/forecast", "/rca", "/risk",
             "/recommend", "/decide", "/run-pipeline", "/pipeline-status",
-            "/explain", "/monitor", "/monitor/drift"
+            "/explain", "/monitor", "/monitor/drift", "/chat"
         ]
     }
 
@@ -172,6 +173,15 @@ async def decide(request: DecisionRequest):
         return result
     except Exception as e:
         raise HTTPException(status_code=422, detail={"error": "engine_failed", "message": str(e), "suggestion": "Check input data format and column names"})
+
+@app.post("/chat", response_model=ChatResponse)
+async def chat_with_future_intelligence(request: ChatRequest):
+    try:
+        agent = ChatAgent()
+        response_text = agent.chat(request.message, request.context)
+        return {"response": response_text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail={"error": "chat_failed", "message": str(e)})
 
 @app.post("/run-pipeline", response_model=AgentRunResponse)
 async def run_pipeline_endpoint(request: AgentRunRequest):

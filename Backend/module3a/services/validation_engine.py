@@ -1,6 +1,30 @@
 import re
 import json
 
+
+# User Query
+#    ↓
+# Input Validation
+#    ↓
+# RAG Retrieval
+#    ↓
+# Retrieval Validation
+#    ↓
+# Context Validation
+#    ↓
+# LLM Generates Answer
+#    ↓
+# Generation Validation
+#    ↓
+# Faithfulness Validation
+#    ↓
+# Critic Agent Review
+#    ↓
+# Confidence Score
+#    ↓
+# Final Answer
+
+
 class ValidationEngine:
     def __init__(self, llm_client=None):
         self.llm_client = llm_client

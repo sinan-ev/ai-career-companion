@@ -68,8 +68,11 @@ class RiskEngine:
             flags_a = clf.fit_predict(X) == -1
             
             # Detector B
-            with np.errstate(invalid='ignore'):
-                z_scores = np.abs(stats.zscore(X, nan_policy='omit'))
+            import warnings
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", RuntimeWarning)
+                with np.errstate(invalid='ignore'):
+                    z_scores = np.abs(stats.zscore(X, nan_policy='omit'))
             flags_b = np.any(z_scores > 3.0, axis=1)
             
             # Detector C

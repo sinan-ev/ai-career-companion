@@ -16,3 +16,4 @@ langchain
 httpx
 python-multipart
 scipy
+groq
