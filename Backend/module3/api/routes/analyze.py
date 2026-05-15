@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from ..schemas import AnalyzeRequest
-from ..routes.upload import datasets
-from ...core.pipeline import run_module3A
+from .upload import datasets
+from ...core.pipeline import run_module3
 import pandas as pd
 
 router = APIRouter()
@@ -29,7 +29,7 @@ async def analyze_dataset(req: AnalyzeRequest):
     }
     module2_output = {}
     
-    result = run_module3A(module1_output, module2_output, df, user_query=req.query)
+    result = run_module3(module1_output, module2_output, df, user_query=req.query)
     analysis_results[dataset_id] = result
     
     return result

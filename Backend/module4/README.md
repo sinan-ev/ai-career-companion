@@ -1,19 +1,19 @@
-# Module 3B — AI Decision Intelligence
+# Module 4 — AI Decision Intelligence
 
 ## 1. Overview
-Module 3B is the AI Decision Intelligence engine of the 4-module Business Intelligence Platform. It processes outputs from earlier modules to run AutoML predictions, time-series forecasting, root cause analysis (RCA), and anomaly risk detection. Finally, it synthesises these outputs into ranked actionable recommendations and strategic decisions using a LangGraph-based agent pipeline.
+Module 4 is the AI Decision Intelligence engine of the 4-module Business Intelligence Platform. It processes outputs from earlier modules to run AutoML predictions, time-series forecasting, root cause analysis (RCA), and anomaly risk detection. Finally, it synthesises these outputs into ranked actionable recommendations and strategic decisions using a LangGraph-based agent pipeline.
 
 ## 2. Folder Structure
 
 ```
-module_3b/
-├── main.py                          ← entry point, imports app from api/routes_3b.py
+module4/
+├── main.py                          ← entry point, imports app from api/routes_4.py
 ├── requirements.txt                 ← all pip dependencies
 ├── README.md                        ← setup + run instructions + curl examples
 │
 ├── ingestion/
 │   ├── __init__.py
-│   └── data_router.py               ← loads M1/M2/M3A outputs into DataFrames
+│   └── data_router.py               ← loads M1/M2/M3 outputs into DataFrames
 │
 ├── engines/
 │   ├── __init__.py
@@ -48,15 +48,15 @@ module_3b/
 │
 └── api/
     ├── __init__.py
-    └── routes_3b.py                 ← all FastAPI routes, imports all engines
+    └── routes_4.py                  ← all FastAPI routes, imports all engines
 ```
 
 ## 3. Installation
 
-Navigate to the `module_3b` directory and install the required packages:
+Navigate to the `module4` directory and install the required packages:
 
 ```bash
-cd module_3b
+cd module4
 pip install -r requirements.txt
 ```
 
@@ -67,7 +67,7 @@ Run the FastAPI application using either `main.py` or directly with `uvicorn`:
 ```bash
 python main.py
 # or
-uvicorn api.routes_3b:app --reload --port 8004
+uvicorn api.routes_4:app --reload --port 8004
 ```
 
 ## 5. Routes and cURL Examples
@@ -140,10 +140,10 @@ The overall pipeline confidence uses a weighted average of individual engines an
 
 ## 7. Connecting to Earlier Modules
 
-The data router (`ingestion/data_router.py`) includes utility functions to load CSV and JSON outputs directly from Module 1, 2, and 3A. The default paths expect this layout:
+The data router (`ingestion/data_router.py`) includes utility functions to load CSV and JSON outputs directly from Module 1, 2, and 3. The default paths expect this layout:
 
 - `../module_1/outputs/`
 - `../module_2/outputs/`
-- `../module_3a/outputs/`
+- `../module_3/outputs/`
 
 Adjust the base paths in the router functions if your local architecture differs.

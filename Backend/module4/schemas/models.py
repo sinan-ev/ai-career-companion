@@ -48,10 +48,13 @@ class AgentRunRequest(BaseModel):
 class PredictionResponse(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
     task_type: str
+    domain: Optional[str] = "General"
     model_used: str
     cv_score: float
     predictions: List[Dict[str, Any]]
     metrics: Dict[str, float]
+    class_distribution: Optional[List[Dict[str, Any]]] = None
+    business_summary: Optional[str] = None
     confidence: ConfidenceScore
 
 class ForecastResponse(BaseModel):

@@ -7,10 +7,10 @@ import {
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell,
-  LineChart, Line, AreaChart, Area
+  LineChart, Line, AreaChart, Area, Legend, ReferenceLine
 } from 'recharts';
 
-const API_URL = "http://127.0.0.1:8000/api/3b/run-pipeline";
+const API_URL = "http://127.0.0.1:8000/api/4/run-pipeline";
 
 const DecisionIntelligenceView = ({ data, targetColumn, featureColumns, activeView }) => {
   const [loading, setLoading] = useState(false);
@@ -42,7 +42,7 @@ const DecisionIntelligenceView = ({ data, targetColumn, featureColumns, activeVi
     setIsTyping(true);
     
     try {
-      const response = await axios.post("http://127.0.0.1:8000/api/3b/chat", {
+      const response = await axios.post("http://127.0.0.1:8000/api/4/chat", {
         message: message,
         context: result || {}
       });
@@ -55,42 +55,58 @@ const DecisionIntelligenceView = ({ data, targetColumn, featureColumns, activeVi
     }
   };
   
-  // Auto-configuration
-  const autoProblem = `Analyze the dataset, predict ${targetColumn || 'the primary outcome'}, find root causes, and provide strategic recommendations.`;
+  const [currentTarget, setCurrentTarget] = useState(targetColumn);
+  
+  // Update internal target if props change
+  React.useEffect(() => {
+    if (targetColumn && targetColumn !== currentTarget) {
+      setCurrentTarget(targetColumn);
+    }
+  }, [targetColumn]);
 
-  const handleRunPipeline = async () => {
-    if (loading || result) return;
+  const handleRunPipeline = async (forceTarget = null) => {
+    const activeTarget = forceTarget || currentTarget || (featureColumns && featureColumns.length > 0 ? featureColumns[featureColumns.length - 1] : "");
+    
     setLoading(true);
     setError(null);
     setResult(null);
 
     try {
-      // Filter out noisy/unwanted columns (like names, addresses, phone numbers) for better ML predictions
+      // Filter out noisy/unwanted columns
       const unwantedKeywords = ['name', 'address', 'phone', 'city', 'postal', 'zip', 'email', 'id', 'contact'];
       
       const filteredData = data.map(row => {
         const cleanRow = {};
         for (const [key, value] of Object.entries(row)) {
-          // Keep target column ALWAYS
-          if (key === targetColumn) {
+          if (key === activeTarget) {
             cleanRow[key] = value;
             continue;
           }
-          // Drop if key matches unwanted keywords
           const lowerKey = key.toLowerCase();
           const isUnwanted = unwantedKeywords.some(kw => lowerKey.includes(kw));
-          
-          if (!isUnwanted) {
-            cleanRow[key] = value;
-          }
+          if (!isUnwanted) cleanRow[key] = value;
         }
         return cleanRow;
       });
 
+      // Auto-detect date column
+      let dateColumn = "";
+      if (data && data.length > 0) {
+        const columns = Object.keys(data[0]);
+        const dateKeywords = ['date', 'time', 'year', 'month', 'day', 'timestamp'];
+        for (const col of columns) {
+          if (dateKeywords.some(kw => col.toLowerCase().includes(kw))) {
+            dateColumn = col;
+            break;
+          }
+        }
+      }
+
       const payload = {
         data: filteredData,
-        target_column: targetColumn || (featureColumns && featureColumns.length > 0 ? featureColumns[featureColumns.length - 1] : ""),
-        problem: autoProblem
+        target_column: activeTarget,
+        date_column: dateColumn,
+        problem: `Analyze the dataset, predict ${activeTarget}, find root causes, and provide strategic recommendations.`
       };
 
       const response = await axios.post(API_URL, payload);
@@ -103,11 +119,16 @@ const DecisionIntelligenceView = ({ data, targetColumn, featureColumns, activeVi
     }
   };
 
+  const onTargetChange = (newTarget) => {
+    setCurrentTarget(newTarget);
+    handleRunPipeline(newTarget);
+  };
+
   React.useEffect(() => {
-    if (!result && !loading && !error) {
+    if (!result && !loading && !error && data) {
       handleRunPipeline();
     }
-  }, []); // Run once on mount
+  }, [data]);
 
   const getConfidenceColor = (level) => {
     switch (level?.toLowerCase()) {
@@ -195,6 +216,118 @@ const DecisionIntelligenceView = ({ data, targetColumn, featureColumns, activeVi
 
   const { prediction, forecast, rca, risk, recommendation, decision, overall_confidence, final_report } = result;
 
+  // Build a yearly sales trend from raw data
+  const buildYearlySalesTrend = () => {
+    if (!data || data.length === 0 || !targetColumn) return [];
+    const yearMap = {};
+    // Try to find a date/year column
+    const cols = Object.keys(data[0]);
+    const dateCol = cols.find(c => ['date','orderdate','year','month','timestamp','time'].some(kw => c.toLowerCase().includes(kw)));
+    data.forEach(row => {
+      let year = 'All';
+      if (dateCol && row[dateCol]) {
+        const parsed = new Date(row[dateCol]);
+        if (!isNaN(parsed.getFullYear())) year = parsed.getFullYear().toString();
+      }
+      const val = parseFloat(row[targetColumn]);
+      if (!isNaN(val)) {
+        if (!yearMap[year]) yearMap[year] = { sum: 0, count: 0 };
+        yearMap[year].sum += val;
+        yearMap[year].count += 1;
+      }
+    });
+    return Object.entries(yearMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([year, { sum, count }]) => ({ year, sales: Math.round(sum), avg: Math.round(sum / count), type: 'historical' }));
+  };
+
+  // Build forecast data with year labels from forecasting engine output
+  const buildForecastBars = () => {
+    if (!forecast || !forecast.forecast || forecast.forecast.length === 0) return [];
+    return forecast.forecast.map(f => {
+      const label = f.date ? f.date.substring(0, 7) : `Period ${f.period}`;
+      return { year: label, sales: Math.round(f.value), lower: Math.round(f.lower_80), upper: Math.round(f.upper_80), type: 'forecast' };
+    });
+  };
+
+  const historicalBars = buildYearlySalesTrend();
+  const forecastBars = buildForecastBars();
+  const combinedChartData = [
+    ...historicalBars,
+    ...forecastBars
+  ];
+  const hasDateData = historicalBars.length > 0;
+
+  // Build class distribution from prediction result (for HR, healthcare, etc.)
+  const classDistData = (prediction?.class_distribution || []).map((c, i) => ({
+    ...c,
+    fill: ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4'][i % 6]
+  }));
+
+  const bestYear = historicalBars.length > 0 ? historicalBars.reduce((a, b) => a.sales > b.sales ? a : b) : null;
+  const totalSales = historicalBars.reduce((s, r) => s + r.sales, 0);
+  const avgYearlySales = historicalBars.length > 0 ? Math.round(totalSales / historicalBars.length) : 0;
+  const latestHistorical = historicalBars[historicalBars.length - 1]?.sales || 0;
+  const firstForecast = forecastBars[0]?.sales || 0;
+  const isTrendUp = firstForecast > latestHistorical;
+  const trendColor = isTrendUp ? '#10b981' : '#ef4444';
+  const trendIcon = isTrendUp ? '↑' : '↓';
+
+  // Domain-adaptive KPI labels
+  const isClassification = prediction?.task_type === 'classification';
+  const dominantClass = classDistData.length > 0 ? classDistData.reduce((a, b) => a.count > b.count ? a : b) : null;
+  const minorityClass = classDistData.length > 1 ? classDistData.reduce((a, b) => a.count < b.count ? a : b) : null;
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      const entry = payload[0]?.payload;
+      const isForecast = entry?.type === 'forecast';
+      const idx = combinedChartData.findIndex(d => d.year === label);
+      const prev = idx > 0 ? combinedChartData[idx - 1]?.sales : null;
+      const pctChange = prev ? (((entry.sales - prev) / prev) * 100).toFixed(1) : null;
+      const isUp = pctChange > 0;
+      return (
+        <div style={{
+          background: 'rgba(15,23,42,0.97)',
+          border: `2px solid ${isForecast ? '#f59e0b' : '#6366f1'}`,
+          borderRadius: '12px',
+          padding: '14px 18px',
+          minWidth: '200px',
+          boxShadow: `0 8px 32px rgba(0,0,0,0.5)`
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+            <span style={{
+              background: isForecast ? 'rgba(245,158,11,0.2)' : 'rgba(99,102,241,0.2)',
+              color: isForecast ? '#f59e0b' : '#6366f1',
+              fontSize: '11px', fontWeight: 700, padding: '3px 10px',
+              borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.5px'
+            }}>
+              {isForecast ? '🔮 AI Forecast' : '📊 Historical'}
+            </span>
+          </div>
+          <p style={{ margin: '0 0 4px', color: '#94a3b8', fontSize: '12px' }}>Year / Period</p>
+          <p style={{ margin: '0 0 10px', color: '#fff', fontSize: '18px', fontWeight: 800 }}>{label}</p>
+          <p style={{ margin: '0 0 4px', color: '#94a3b8', fontSize: '12px' }}>{targetColumn}</p>
+          <p style={{ margin: '0 0 8px', color: isForecast ? '#f59e0b' : '#818cf8', fontSize: '22px', fontWeight: 800 }}>
+            {entry.sales?.toLocaleString()}
+          </p>
+          {pctChange !== null && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              color: isUp ? '#10b981' : '#ef4444',
+              fontSize: '13px', fontWeight: 600,
+              background: isUp ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+              padding: '4px 10px', borderRadius: '8px'
+            }}>
+              {isUp ? '↑' : '↓'} {Math.abs(pctChange)}% vs previous year
+            </div>
+          )}
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="di-results-container">
       {/* Top Navigation / Header */}
@@ -203,6 +336,48 @@ const DecisionIntelligenceView = ({ data, targetColumn, featureColumns, activeVi
           <h2 style={{ fontSize: '18px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
             {activeView === 'insights' ? <><TrendingUp size={20} color="var(--primary)" /> Future Insights</> : <><Lightbulb size={20} color="#f59e0b" /> Solutions & Actions</>}
           </h2>
+          
+          {prediction?.domain && (
+            <div className="domain-badge" style={{ 
+              marginLeft: '16px', 
+              background: 'rgba(99,102,241,0.1)', 
+              color: '#818cf8', 
+              padding: '4px 12px', 
+              borderRadius: '20px', 
+              fontSize: '11px', 
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              border: '1px solid rgba(99,102,241,0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}>
+              <Sparkles size={12} /> {prediction.domain}
+            </div>
+          )}
+          
+          <div className="target-selector-wrapper" style={{ marginLeft: '24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Predicting:</span>
+            <select 
+              value={currentTarget} 
+              onChange={(e) => onTargetChange(e.target.value)}
+              style={{
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: '#fff',
+                padding: '4px 12px',
+                borderRadius: '6px',
+                fontSize: '13px',
+                outline: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              {data && data.length > 0 && Object.keys(data[0]).map(col => (
+                <option key={col} value={col}>{col}</option>
+              ))}
+            </select>
+          </div>
         </div>
         <div className="di-nav-right">
           <div className="overall-score">
@@ -223,130 +398,303 @@ const DecisionIntelligenceView = ({ data, targetColumn, featureColumns, activeVi
       <AnimatePresence mode="wait">
         {activeView === 'insights' && (
           <motion.div key="insights" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="di-tab-content">
-            <div className="di-grid-2">
-              {/* Predictions Card */}
+
+            {/* ── KPI Cards ── */}
+            <div className="kpi-cards-row">
+              <div className="kpi-card">
+                <div className="kpi-icon" style={{ background: 'rgba(99,102,241,0.15)' }}><TrendingUp size={20} color="#6366f1" /></div>
+                <div>
+                  <div className="kpi-label">
+                    {isClassification ? `Total ${currentTarget} Records` : `Avg Yearly ${currentTarget}`}
+                  </div>
+                  <div className="kpi-value" style={{ color: '#6366f1' }}>
+                    {isClassification
+                      ? (classDistData.reduce((s, c) => s + c.count, 0)).toLocaleString()
+                      : avgYearlySales.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+              <div className="kpi-card">
+                <div className="kpi-icon" style={{ background: 'rgba(16,185,129,0.15)' }}><Target size={20} color="#10b981" /></div>
+                <div>
+                  <div className="kpi-label">
+                    {isClassification ? `Majority Class` : `Best Historical Year`}
+                  </div>
+                  <div className="kpi-value" style={{ color: '#10b981' }}>
+                    {isClassification
+                      ? (dominantClass ? `${dominantClass.label} (${dominantClass.count.toLocaleString()})` : '—')
+                      : (bestYear ? `${bestYear.year} (${bestYear.sales.toLocaleString()})` : '—')}
+                  </div>
+                </div>
+              </div>
+              <div className="kpi-card">
+                <div className="kpi-icon" style={{ background: `rgba(${isTrendUp ? '16,185,129' : '239,68,68'},0.15)` }}>
+                  <Activity size={20} color={isClassification ? '#f59e0b' : trendColor} />
+                </div>
+                <div>
+                  <div className="kpi-label">{isClassification ? `Minority / At-Risk Class` : `Forecast Trend`}</div>
+                  <div className="kpi-value" style={{ color: isClassification ? '#f59e0b' : trendColor }}>
+                    {isClassification
+                      ? (minorityClass ? `${minorityClass.label} (${minorityClass.count.toLocaleString()})` : '—')
+                      : `${trendIcon} ${forecast?.trend_direction || (forecastBars.length > 0 ? (isTrendUp ? 'Upward' : 'Downward') : 'No Forecast')}`}
+                  </div>
+                </div>
+              </div>
+              <div className="kpi-card">
+                <div className="kpi-icon" style={{ background: 'rgba(245,158,11,0.15)' }}><ShieldCheck size={20} color="#f59e0b" /></div>
+                <div>
+                  <div className="kpi-label">AI Confidence</div>
+                  <div className="kpi-value" style={{ color: getConfidenceColor(prediction?.confidence?.level) }}>
+                    {Math.round((prediction?.confidence?.score || 0) * 100)}% — {prediction?.confidence?.level?.toUpperCase()}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Main Chart: Time-series OR Classification Distribution ── */}
+            <div className="glass-card di-card" style={{ marginTop: '16px' }}>
+              <div className="di-card-header">
+                <div className="title-group">
+                  <LineChartIcon size={20} color="#6366f1" />
+                  <h3>
+                    {hasDateData
+                      ? `${currentTarget} Trend — Historical & Predicted Future`
+                      : isClassification
+                        ? `${currentTarget} Distribution — AI Prediction Breakdown`
+                        : `${currentTarget} — Data Overview`}
+                  </h3>
+                </div>
+                {hasDateData && (
+                  <div style={{ display: 'flex', gap: '16px', fontSize: '13px', alignItems: 'center' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ width: 12, height: 12, borderRadius: 3, background: '#6366f1', display: 'inline-block' }}></span> Historical
+                    </span>
+                    {combinedChartData.some(d => d.type === 'forecast') && (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ width: 12, height: 12, borderRadius: 3, background: '#f59e0b', display: 'inline-block' }}></span> AI Forecast
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="di-card-body">
+
+                {/* ── TIME SERIES CHART (Sales, Finance, etc.) ── */}
+                {hasDateData && (
+                  <>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={combinedChartData} margin={{ top: 30, right: 20, left: 10, bottom: 20 }} barCategoryGap="30%">
+                        <defs>
+                          <linearGradient id="gradHistorical" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#818cf8" stopOpacity={1}/>
+                            <stop offset="100%" stopColor="#4f46e5" stopOpacity={0.8}/>
+                          </linearGradient>
+                          <linearGradient id="gradForecast" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#fcd34d" stopOpacity={1}/>
+                            <stop offset="100%" stopColor="#d97706" stopOpacity={0.8}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                        <XAxis dataKey="year" stroke="rgba(255,255,255,0.2)" tick={{ fontSize: 12, fill: '#94a3b8', fontWeight: 600 }} axisLine={{ stroke: 'rgba(255,255,255,0.1)' }} tickLine={false} />
+                        <YAxis stroke="rgba(255,255,255,0.1)" tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={v => v >= 1000000 ? `${(v/1000000).toFixed(1)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}K` : v} axisLine={false} tickLine={false} />
+                        <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)', radius: 4 }} />
+                        {combinedChartData.some(d => d.type === 'forecast') && historicalBars.length > 0 && (
+                          <ReferenceLine x={historicalBars[historicalBars.length - 1].year} stroke="rgba(245,158,11,0.6)" strokeDasharray="6 3" strokeWidth={2}
+                            label={{ value: '◀ History  |  AI Forecast ▶', position: 'top', fill: '#f59e0b', fontSize: 11, fontWeight: 700 }} />
+                        )}
+                        <Bar dataKey="sales" name={targetColumn} radius={[8, 8, 0, 0]} maxBarSize={70}>
+                          {combinedChartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.type === 'forecast' ? 'url(#gradForecast)' : 'url(#gradHistorical)'} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '24px', marginTop: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ width: 14, height: 14, borderRadius: 4, background: 'linear-gradient(180deg, #818cf8, #4f46e5)' }}></div>
+                        <span style={{ fontSize: '13px', color: '#94a3b8', fontWeight: 600 }}>Historical {targetColumn}</span>
+                      </div>
+                      {combinedChartData.some(d => d.type === 'forecast') && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ width: 14, height: 14, borderRadius: 4, background: 'linear-gradient(180deg, #fcd34d, #d97706)' }}></div>
+                          <span style={{ fontSize: '13px', color: '#94a3b8', fontWeight: 600 }}>AI Predicted {targetColumn}</span>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {/* ── CLASSIFICATION DISTRIBUTION CHART (HR, Healthcare, etc.) ── */}
+                {!hasDateData && isClassification && classDistData.length > 0 && (
+                  <>
+                    <div style={{ marginBottom: '16px', padding: '12px 16px', background: 'rgba(99,102,241,0.08)', borderRadius: '10px', borderLeft: '4px solid #6366f1' }}>
+                      <p style={{ margin: 0, fontSize: '14px', color: 'var(--text)', lineHeight: 1.6 }}>
+                        <strong style={{ color: '#818cf8' }}>How to read this chart:</strong> The bars show how many records fall into each {targetColumn} category in your dataset. The AI has learned the patterns behind each category and can now predict which category a new record will belong to.
+                      </p>
+                    </div>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <BarChart data={classDistData} margin={{ top: 20, right: 20, left: 10, bottom: 20 }} barCategoryGap="35%">
+                        <defs>
+                          {classDistData.map((c, i) => (
+                            <linearGradient key={i} id={`gradClass${i}`} x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor={c.fill} stopOpacity={1}/>
+                              <stop offset="100%" stopColor={c.fill} stopOpacity={0.6}/>
+                            </linearGradient>
+                          ))}
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                        <XAxis dataKey="label" stroke="rgba(255,255,255,0.2)" tick={{ fontSize: 13, fill: '#94a3b8', fontWeight: 700 }} axisLine={false} tickLine={false} />
+                        <YAxis stroke="rgba(255,255,255,0.1)" tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={v => v.toLocaleString()} axisLine={false} tickLine={false} />
+                        <RechartsTooltip
+                          contentStyle={{ background: 'rgba(15,23,42,0.97)', border: '2px solid #6366f1', borderRadius: '12px', padding: '14px 18px' }}
+                          formatter={(value, name) => [value.toLocaleString() + ' records', targetColumn]}
+                          labelFormatter={label => `Category: ${label}`}
+                        />
+                        <Bar dataKey="count" radius={[10, 10, 0, 0]} maxBarSize={90}>
+                          {classDistData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={`url(#gradClass${index})`} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', marginTop: '10px', flexWrap: 'wrap' }}>
+                      {classDistData.map((c, i) => {
+                        const total = classDistData.reduce((s, x) => s + x.count, 0);
+                        const pct = total > 0 ? ((c.count / total) * 100).toFixed(1) : 0;
+                        return (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: 12, height: 12, borderRadius: 3, background: c.fill }}></div>
+                            <span style={{ fontSize: '13px', color: '#94a3b8' }}>
+                              <strong style={{ color: '#e2e8f0' }}>{c.label}</strong>: {c.count.toLocaleString()} ({pct}%)
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+
+                {/* ── FALLBACK: no date, not classification ── */}
+                {!hasDateData && !isClassification && (
+                  <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
+                    <TrendingUp size={40} color="#6366f1" style={{ marginBottom: '16px', opacity: 0.5 }} />
+                    <p style={{ fontSize: '15px', margin: 0 }}>Add a date column to your dataset to see year-by-year trend analysis.</p>
+                  </div>
+                )}
+
+                {/* AI business summary */}
+                {prediction?.business_summary && !prediction.business_summary.startsWith('API Error') && (
+                  <div style={{ background: 'rgba(99,102,241,0.07)', padding: '16px 20px', borderRadius: '8px', borderLeft: '4px solid #6366f1', marginTop: '16px' }}>
+                    <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.7', color: 'var(--text)' }}>
+                      <strong style={{ color: '#6366f1' }}>🤖 AI Insight: </strong>{prediction.business_summary}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ── Bottom row: AI Confidence + Risk Detection ── */}
+            <div className="di-grid-2" style={{ marginTop: '16px' }}>
+              {/* Prediction confidence card */}
               {prediction && (
                 <div className="glass-card di-card">
                   <div className="di-card-header">
                     <div className="title-group">
                       <Target size={20} color="var(--primary)" />
-                      <h3>Predictions & Business Accuracy</h3>
+                      <h3>AI Prediction Confidence</h3>
                     </div>
                   </div>
                   <div className="di-card-body">
                     <ConfidenceBadge confidence={prediction.confidence} />
-                    <div className="metric-row">
-                      <div className="metric-box">
-                        <span className="metric-label">Task Type</span>
-                        <span className="metric-value">{prediction.task_type}</span>
-                      </div>
-                      <div className="metric-box">
-                        <span className="metric-label">Model Used</span>
-                        <span className="metric-value">{prediction.model_used}</span>
-                      </div>
-                      <div className="metric-box">
-                        <span className="metric-label">Business Confidence Score</span>
-                        <span className="metric-value highlight">{prediction.task_type === 'classification' ? (prediction.cv_score * 100).toFixed(1) + '%' : (Math.max(0, prediction.metrics?.r2 || 0)).toFixed(2) + ' R²'}</span>
-                      </div>
-                    </div>
-                    
                     {prediction.predictions && prediction.predictions.length > 0 && (
                       <div className="prediction-chart mt-4">
-                        <h4>Prediction vs Actual Distribution</h4>
-                        <ResponsiveContainer width="100%" height={200}>
-                          <BarChart data={prediction.predictions.slice(0, 15)} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '8px' }}>Actual vs Predicted Comparison (sample)</h4>
+                        <ResponsiveContainer width="100%" height={160}>
+                          <BarChart data={prediction.predictions.slice(0, 12)} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                            <XAxis dataKey="index" stroke="var(--text-muted)" tick={{ fontSize: 11 }} />
-                            <YAxis stroke="var(--text-muted)" tick={{ fontSize: 11 }} />
-                            <RechartsTooltip contentStyle={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
-                            <Bar dataKey="actual" name="Actual Value" fill="#8b5cf6" radius={[4,4,0,0]} />
-                            <Bar dataKey="predicted" name="Predicted Value" fill="#10b981" radius={[4,4,0,0]} />
+                            <XAxis dataKey="index" stroke="var(--text-muted)" tick={{ fontSize: 10 }} />
+                            <YAxis stroke="var(--text-muted)" tick={{ fontSize: 10 }} />
+                            <RechartsTooltip contentStyle={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '12px' }} />
+                            <Bar dataKey="actual" name="Actual" fill="#8b5cf6" radius={[3,3,0,0]} />
+                            <Bar dataKey="predicted" name="Predicted" fill="#10b981" radius={[3,3,0,0]} />
                           </BarChart>
                         </ResponsiveContainer>
                       </div>
                     )}
-                    
-                    <button className="di-download-btn">
-                      <Download size={14} /> Download Predictions Dataset
+                    <button className="di-download-btn" style={{ marginTop: '8px' }}>
+                      <Download size={14} /> Download Full Predictions
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* Forecast Card */}
-              {forecast && forecast.forecast && forecast.forecast.length > 0 && (
+              {/* Risk Detection */}
+              {risk && (
                 <div className="glass-card di-card">
                   <div className="di-card-header">
                     <div className="title-group">
-                      <LineChartIcon size={20} color="#10b981" />
-                      <h3>Time-Series Forecast</h3>
+                      <AlertTriangle size={20} color="#f59e0b" />
+                      <h3>Risk & Anomaly Detection</h3>
+                    </div>
+                    <div className="risk-score-badge">
+                      Risk Score: <strong style={{ color: (risk.risk_score || 0) > 50 ? '#ef4444' : '#10b981'}}>{(risk.risk_score || 0).toFixed(1)}</strong>
                     </div>
                   </div>
                   <div className="di-card-body">
-                    <ConfidenceBadge confidence={forecast.confidence} />
-                    <div className="forecast-summary">
-                      <strong>Trend: {forecast.trend_direction}</strong>
-                      <p>{forecast.trend_explanation}</p>
-                    </div>
-                    
-                    <div className="prediction-chart mt-4">
-                      <ResponsiveContainer width="100%" height={200}>
-                        <AreaChart data={forecast.forecast}>
-                          <defs>
-                            <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                              <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                          <XAxis dataKey="ds" stroke="var(--text-muted)" tick={{ fontSize: 11 }} />
-                          <YAxis stroke="var(--text-muted)" tick={{ fontSize: 11 }} />
-                          <RechartsTooltip contentStyle={{ background: '#1e293b', border: 'none', borderRadius: '8px' }} />
-                          <Area type="monotone" dataKey="yhat" stroke="#10b981" fillOpacity={1} fill="url(#colorValue)" />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-            
-            {/* Risk Detection */}
-            {risk && (
-              <div className="glass-card di-card mt-4">
-                <div className="di-card-header">
-                  <div className="title-group">
-                    <AlertTriangle size={20} color="#f59e0b" />
-                    <h3>Risk & Anomaly Detection</h3>
-                  </div>
-                  <div className="risk-score-badge">
-                    Risk Score: <strong style={{ color: (risk.risk_score || 0) > 50 ? '#ef4444' : '#f59e0b'}}>{(risk.risk_score || 0).toFixed(1)}</strong>
-                  </div>
-                </div>
-                <div className="di-card-body">
-                  <div className="di-grid-2">
-                    <div>
-                      <ConfidenceBadge confidence={risk.confidence} />
-                      <ul className="alert-list">
-                        {(risk.alerts || []).map((alert, idx) => (
-                          <li key={idx}><AlertTriangle size={14} color="#f59e0b" /> {alert}</li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className="anomaly-stats">
+                    <ConfidenceBadge confidence={risk.confidence} />
+                    <div className="anomaly-stats" style={{ marginTop: '8px' }}>
                       <div className="stat-row">
                         <span>Total Records Checked</span>
                         <strong>{risk.total_records || 0}</strong>
                       </div>
                       <div className="stat-row">
                         <span>Anomalies Detected</span>
-                        <strong style={{ color: '#ef4444'}}>{risk.anomaly_count || 0}</strong>
+                        <strong style={{ color: (risk.anomaly_count || 0) > 0 ? '#ef4444' : '#10b981'}}>{risk.anomaly_count || 0}</strong>
                       </div>
                       <div className="stat-row">
                         <span>Anomaly Rate</span>
                         <strong>{((risk.anomaly_rate || 0) * 100).toFixed(1)}%</strong>
                       </div>
                     </div>
+                    <ul className="alert-list" style={{ marginTop: '12px' }}>
+                      {(risk.alerts || []).map((alert, idx) => (
+                        <li key={idx}><AlertTriangle size={14} color="#f59e0b" /> {alert}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── Key Business Drivers (RCA Integration) ── */}
+            {rca && (
+              <div className="glass-card di-card" style={{ marginTop: '16px' }}>
+                <div className="di-card-header">
+                  <div className="title-group">
+                    <Activity size={20} color="#8b5cf6" />
+                    <h3>Key Prediction Drivers — What's influencing the result?</h3>
+                  </div>
+                </div>
+                <div className="di-card-body">
+                  <p style={{ fontSize: '14px', color: '#94a3b8', marginBottom: '16px' }}>{rca.explanation}</p>
+                  <div className="top-features">
+                    {(rca.top_features || []).slice(0, 5).map((feat, idx) => (
+                      <div key={idx} className="feature-bar-row" style={{ marginBottom: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px' }}>
+                          <span className="feature-name" style={{ fontWeight: 600, color: '#e2e8f0' }}>{feat.feature}</span>
+                          <span className="feature-impact" style={{ color: '#8b5cf6', fontWeight: 700 }}>{Math.round(feat.importance * 100)}% Impact</span>
+                        </div>
+                        <div className="feature-bar-bg" style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                          <motion.div 
+                            className="feature-bar-fill" 
+                            initial={{ width: 0 }}
+                            animate={{ width: `${feat.importance * 100}%` }}
+                            transition={{ duration: 1, delay: idx * 0.1 }}
+                            style={{ height: '100%', background: 'linear-gradient(90deg, #8b5cf6, #d8b4fe)', borderRadius: '4px' }}
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -634,6 +982,51 @@ const DecisionIntelligenceView = ({ data, targetColumn, featureColumns, activeVi
           box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
         }
 
+        /* KPI Cards Row */
+        .kpi-cards-row {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 14px;
+          margin-bottom: 4px;
+        }
+        .kpi-card {
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 12px;
+          padding: 16px 18px;
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          transition: background 0.2s;
+        }
+        .kpi-card:hover {
+          background: rgba(255,255,255,0.07);
+        }
+        .kpi-icon {
+          width: 42px;
+          height: 42px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .kpi-label {
+          font-size: 11px;
+          color: var(--text-muted);
+          text-transform: uppercase;
+          font-weight: 600;
+          letter-spacing: 0.5px;
+          margin-bottom: 4px;
+        }
+        .kpi-value {
+          font-size: 17px;
+          font-weight: 700;
+        }
+        @media (max-width: 900px) {
+          .kpi-cards-row { grid-template-columns: repeat(2, 1fr); }
+        }
+
         .di-loading-state {
           display: flex;
           align-items: center;
@@ -733,6 +1126,9 @@ const DecisionIntelligenceView = ({ data, targetColumn, featureColumns, activeVi
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 20px;
+        }
+        .di-grid-2.single-column {
+          grid-template-columns: 1fr;
         }
 
         .di-card {

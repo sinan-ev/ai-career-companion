@@ -5,9 +5,16 @@ import pandas as pd
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Any
+import warnings
 
-# Ensure module_3b is in the Python path
-sys.path.append(os.path.join(os.path.dirname(__file__), "module_3b"))
+# Suppress all non-critical library warnings for a "perfect" console experience
+warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore", module="shap")
+warnings.filterwarnings("ignore", module="lightgbm")
+
+# Ensure module4 is in the Python path
+sys.path.append(os.path.join(os.path.dirname(__file__), "module4"))
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -125,7 +132,7 @@ async def process_dataset(
         print(f"Module 2 Error: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Module 2 failed: {str(e)}")
 
-    from module3a.api.routes.upload import datasets
+    from module3.api.routes.upload import datasets
     import uuid
     dataset_id = str(uuid.uuid4())
     datasets[dataset_id] = df.copy()
@@ -146,21 +153,21 @@ async def health():
         "version": "2.0.1"
     }
 
-from module3a.api.routes import upload as m3a_upload
-from module3a.api.routes import analyze as m3a_analyze
-from module3a.api.routes import charts as m3a_charts
-from module3a.api.routes import insights as m3a_insights
-from module3a.api.routes import chat as m3a_chat
+from module3.api.routes import upload as m3_upload
+from module3.api.routes import analyze as m3_analyze
+from module3.api.routes import charts as m3_charts
+from module3.api.routes import insights as m3_insights
+from module3.api.routes import chat as m3_chat
 
-app.include_router(m3a_upload.router, prefix="/api", tags=["Module 3A"])
-app.include_router(m3a_analyze.router, prefix="/api", tags=["Module 3A"])
-app.include_router(m3a_charts.router, prefix="/api", tags=["Module 3A"])
-app.include_router(m3a_insights.router, prefix="/api", tags=["Module 3A"])
-app.include_router(m3a_chat.router, prefix="/api", tags=["Module 3A"])
+app.include_router(m3_upload.router, prefix="/api", tags=["Module 3"])
+app.include_router(m3_analyze.router, prefix="/api", tags=["Module 3"])
+app.include_router(m3_charts.router, prefix="/api", tags=["Module 3"])
+app.include_router(m3_insights.router, prefix="/api", tags=["Module 3"])
+app.include_router(m3_chat.router, prefix="/api", tags=["Module 3"])
 
-# Mount Module 3B as a sub-application
-from module_3b.api.routes_3b import app as module3b_app
-app.mount("/api/3b", module3b_app)
+# Mount Module 4 as a sub-application
+from module4.api.routes_4 import app as module4_app
+app.mount("/api/4", module4_app)
 
 if __name__ == "__main__":
     import uvicorn

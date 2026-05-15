@@ -72,6 +72,11 @@ class DecisionEngine:
                 recommendation.get("confidence", {}).get("score", 0.5)
             ]
             
+            import numpy as np
+            scores = [float(s) for s in scores if np.isfinite(s)]
+            if not scores:
+                scores = [0.5]
+            
             weakest_score = min(scores)
             
             if weakest_score < 0.50:

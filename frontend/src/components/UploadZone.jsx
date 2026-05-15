@@ -51,8 +51,8 @@ const UploadZone = ({ onUpload }) => {
   const features = [
     { icon: Brain, label: "Mod 1: AI Understanding", desc: "Schema, cleaning, quality" },
     { icon: Database, label: "Mod 2: Data Engineering", desc: "Auto ML-ready datasets" },
-    { icon: BarChart3, label: "Mod 3A: AI Analyst", desc: "Chat, Dashboards & Insights" },
-    { icon: TrendingUp, label: "Mod 3B: Decision Intel", desc: "Predictions, Forecasts & RCA" },
+    { icon: BarChart3, label: "Mod 3: AI Analyst", desc: "Chat, Dashboards & Insights" },
+    { icon: TrendingUp, label: "Mod 4: Decision Intel", desc: "Predictions, Forecasts & RCA" },
   ];
 
   return (

@@ -14,7 +14,7 @@ class DatasetSummary(BaseModel):
     categorical_columns: List[str]
     datetime_columns: List[str]
 
-class Module3AResult(BaseModel):
+class Module3Result(BaseModel):
     charts: List[ChartData]
     insights: List[str]
     explanations: str

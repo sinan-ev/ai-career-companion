@@ -70,9 +70,9 @@ def load_module2_outputs(base_path: str = "../module_2/outputs") -> Dict[str, An
         
     return result
 
-def load_module3a_outputs(base_path: str = "../module_3a/outputs") -> Dict[str, Any]:
+def load_module3_outputs(base_path: str = "../module_3/outputs") -> Dict[str, Any]:
     """
-    Load AI insights and RAG results from Module 3A.
+    Load AI insights and RAG results from Module 3.
     """
     insights_path = os.path.join(base_path, "insights.json")
     rag_path = os.path.join(base_path, "rag_results.json")
@@ -89,21 +89,21 @@ def load_module3a_outputs(base_path: str = "../module_3a/outputs") -> Dict[str, 
             with open(insights_path, 'r') as f:
                 result["insights"] = json.load(f)
         else:
-            logger.warning(f"Module 3A insights not found at {insights_path}")
+            logger.warning(f"Module 3 insights not found at {insights_path}")
             
         if os.path.exists(rag_path):
             with open(rag_path, 'r') as f:
                 result["rag_results"] = json.load(f)
         else:
-            logger.warning(f"Module 3A rag results not found at {rag_path}")
+            logger.warning(f"Module 3 rag results not found at {rag_path}")
             
         if os.path.exists(summary_path):
             with open(summary_path, 'r') as f:
                 result["analysis_summary"] = json.load(f)
         else:
-            logger.warning(f"Module 3A analysis summary not found at {summary_path}")
+            logger.warning(f"Module 3 analysis summary not found at {summary_path}")
     except Exception as e:
-        logger.error(f"Error loading Module 3A outputs: {e}")
+        logger.error(f"Error loading Module 3 outputs: {e}")
         
     return result
 

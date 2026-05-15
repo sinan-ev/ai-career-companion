@@ -127,7 +127,11 @@ class RecommendationEngine:
                 pass
                 
             # Combine LLM and rule-based recommendations
-            final_recommendations = llm_recommendations + recommendations
+            if len(llm_recommendations) > 0:
+                # If we successfully got AI strategies, discard the generic rules to keep the UI clean
+                final_recommendations = llm_recommendations
+            else:
+                final_recommendations = recommendations
 
             confidence = ConfidenceScore(
                 score=overall_score,

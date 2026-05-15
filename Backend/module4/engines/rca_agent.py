@@ -7,6 +7,11 @@ from schemas.models import ConfidenceScore
 from ingestion.data_router import route_data
 from utils.llm_client import LLMClient
 import json
+import warnings
+
+# Suppress specific library warnings for cleaner console output
+warnings.filterwarnings("ignore", category=UserWarning, module="shap")
+warnings.filterwarnings("ignore", category=UserWarning, module="lightgbm")
 
 class RCAAgent:
     def _compute_confidence(self, shap_variance: float) -> ConfidenceScore:
@@ -107,7 +112,16 @@ class RCAAgent:
             }).sort_values(by='importance', ascending=False)
             
             top_features = feature_importance.head(5).copy()
-            shap_variance = float(top_features['std'].mean() / (top_features['importance'].mean() + 1e-9))
+            
+            # Robust variance calculation
+            mean_importance_val = top_features['importance'].mean()
+            if mean_importance_val == 0 or not np.isfinite(mean_importance_val):
+                shap_variance = 0.0
+            else:
+                shap_variance = float(top_features['std'].mean() / (mean_importance_val + 1e-9))
+            
+            if not np.isfinite(shap_variance):
+                shap_variance = 0.0
             
             top_features_list = []
             causal_chain = []
@@ -115,6 +129,8 @@ class RCAAgent:
             for i, row in enumerate(top_features.itertuples()):
                 # Improved heuristics for a business user
                 importance_val = float(row.importance)
+                if not np.isfinite(importance_val):
+                    importance_val = 0.0
                 if abs(importance_val) < 0.0001:
                     direction = "influences"
                 else:

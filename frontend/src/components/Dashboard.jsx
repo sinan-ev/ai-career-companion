@@ -70,7 +70,7 @@ const Dashboard = ({ data, onReset }) => {
     { id: 'exports',   label: 'Exports',    icon: FileDown },
     { id: 'analyst',   label: 'AI Analyst', icon: Brain },
     { id: 'insights',  label: 'Future Insights', icon: TrendingUp },
-    { id: 'solutions', label: 'Solutions', icon: Lightbulb },
+    { id: 'solutions', label: 'Strategic Solutions', icon: Lightbulb },
   ];
 
   // ─── Quality score color ───

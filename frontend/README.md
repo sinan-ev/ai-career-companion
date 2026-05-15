@@ -32,9 +32,9 @@ npm run build
 ```
 
 ## 📂 Key Components
-- **`UploadZone`**: The landing area for drag-and-drop file processing, highlighting Module 3A capabilities.
+- **`UploadZone`**: The landing area for drag-and-drop file processing, highlighting Module 3 capabilities.
 - **`PipelineView`**: A visual tracer showing how the AI preprocessed the data step-by-step.
-- **`AnalystView`**: The core dashboard for Module 3A containing charts, automated insights, and the AI chatbot.
+- **`AnalystView`**: The core dashboard for Module 3 containing charts, automated insights, and the AI chatbot.
 
 ## 🛠 Technologies
 - React 18, Vite

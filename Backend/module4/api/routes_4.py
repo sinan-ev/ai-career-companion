@@ -15,9 +15,23 @@ from explainability.xai_layer import XAILayer
 from monitoring.model_monitor import ModelMonitor
 from outputs.report_generator import ReportGenerator
 from ingestion.data_router import validate_dataset, route_data
+import numpy as np
+
+def sanitize_json(data):
+    """Recursively replace non-JSON compliant floats (NaN, Inf, -Inf) with 0.0."""
+    if isinstance(data, dict):
+        return {k: sanitize_json(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [sanitize_json(v) for v in data]
+    elif isinstance(data, float):
+        if not np.isfinite(data):
+            return 0.0
+        return data
+    else:
+        return data
 
 app = FastAPI(
-    title="Module 3B — AI Decision Intelligence",
+    title="Module 4 — AI Decision Intelligence",
     description="Prediction · Forecasting · RCA · Risk · Recommendations · Decisions",
     version="1.0.0"
 )
@@ -34,9 +48,9 @@ monitor = ModelMonitor()
 @app.get("/")
 async def root():
     return {
-        "message": "Module 3B is running",
+        "message": "Module 4 is running",
         "version": "1.0.0",
-        "module": "3b",
+        "module": "4",
         "status": "ok",
         "available_routes": [
             "/health", "/predict", "/forecast", "/rca", "/risk",
@@ -49,7 +63,7 @@ async def root():
 async def health():
     return {
         "status": "ok",
-        "module": "3b",
+        "module": "4",
         "port": 8004,
         "engines": ["prediction", "forecasting", "rca", "risk", "recommendation", "decision", "agents"],
         "monitor": monitor.get_health_report()
@@ -69,7 +83,7 @@ async def predict(request: PredictionRequest):
         conf_score = result.get("confidence", {}).get("score", 0.0)
         monitor.log_run("predict", result.get("metrics", {}), conf_score, "PredictionEngine")
         
-        return result
+        return sanitize_json(result)
     except Exception as e:
         raise HTTPException(status_code=422, detail={"error": "engine_failed", "message": str(e), "suggestion": "Check input data format and column names"})
 
@@ -87,7 +101,7 @@ async def forecast(request: ForecastRequest):
         conf_score = result.get("confidence", {}).get("score", 0.0)
         monitor.log_run("forecast", {"periods": request.periods}, conf_score, "ForecastingEngine")
         
-        return result
+        return sanitize_json(result)
     except Exception as e:
         raise HTTPException(status_code=422, detail={"error": "engine_failed", "message": str(e), "suggestion": "Check input data format and column names"})
 
@@ -105,7 +119,7 @@ async def rca(request: RCARequest):
         conf_score = result.get("confidence", {}).get("score", 0.0)
         monitor.log_run("rca", {"top_features_count": len(result.get("top_features", []))}, conf_score, "RCAAgent")
         
-        return result
+        return sanitize_json(result)
     except Exception as e:
         raise HTTPException(status_code=422, detail={"error": "engine_failed", "message": str(e), "suggestion": "Check input data format and column names"})
 
@@ -123,7 +137,7 @@ async def risk(request: RiskRequest):
         conf_score = result.get("confidence", {}).get("score", 0.0)
         monitor.log_run("risk", {"risk_score": result.get("risk_score")}, conf_score, "RiskEngine")
         
-        return result
+        return sanitize_json(result)
     except Exception as e:
         raise HTTPException(status_code=422, detail={"error": "engine_failed", "message": str(e), "suggestion": "Check input data format and column names"})
 
@@ -136,7 +150,7 @@ async def recommend(request: RecommendRequest):
         conf_score = result.get("confidence", {}).get("score", 0.0)
         monitor.log_run("recommend", {"recs_count": len(result.get("recommendations", []))}, conf_score, "RecommendationEngine")
         
-        return result
+        return sanitize_json(result)
     except Exception as e:
         raise HTTPException(status_code=422, detail={"error": "engine_failed", "message": str(e), "suggestion": "Check input values"})
 
@@ -170,7 +184,7 @@ async def decide(request: DecisionRequest):
         conf_score = result.get("confidence", {}).get("score", 0.0)
         monitor.log_run("decide", {}, conf_score, "DecisionEngine")
         
-        return result
+        return sanitize_json(result)
     except Exception as e:
         raise HTTPException(status_code=422, detail={"error": "engine_failed", "message": str(e), "suggestion": "Check input data format and column names"})
 
@@ -202,7 +216,7 @@ async def run_pipeline_endpoint(request: AgentRunRequest):
                 prediction["confidence"] = ConfidenceScore(score=0.5, level="moderate", explanation="Unknown", basis=[], suggestions=["Review"]).model_dump()
         else: prediction = None
         
-        return {
+        return sanitize_json({
             "job_id": final_state.get("job_id", ""),
             "prediction": prediction,
             "forecast": final_state.get("forecast_result"),
@@ -213,7 +227,7 @@ async def run_pipeline_endpoint(request: AgentRunRequest):
             "overall_confidence": final_state.get("overall_confidence", ConfidenceScore(score=0.0, level="uncertain", explanation="Failed", basis=[], suggestions=["Retry"]).model_dump()),
             "final_report": final_state.get("final_report", ""),
             "errors": final_state.get("errors", [])
-        }
+        })
     except Exception as e:
         raise HTTPException(status_code=422, detail={"error": "engine_failed", "message": str(e), "suggestion": "Check input data format and column names"})
 

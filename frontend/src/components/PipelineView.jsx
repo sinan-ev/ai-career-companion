@@ -60,19 +60,19 @@ const PipelineView = ({ steps = [], plan = [] }) => {
         </div>
       </div>
 
-      {/* Module 3‑A Feature Pills */}
-      <div className="pipeline-module3a-pills">
+      {/* Module 3 Feature Pills */}
+      <div className="pipeline-module3-pills">
         {[
           { emoji: '🔭', label: 'Scout Agent',   desc: 'Profiles every column – dtype, nulls, top values, ID detection' },
           { emoji: '🧠', label: 'Planner Agent', desc: 'LLM designs 5–6 business-critical chart specs' },
           { emoji: '🔍', label: 'Critic Agent',  desc: 'Validates specs, auto-repairs bad columns & aggregations' },
           { emoji: '⚙️', label: 'Builder Agent', desc: 'Executes specs, skips empties, returns clean chart data' },
         ].map((item, i) => (
-          <div className="pipeline-m3a-pill" key={i}>
-            <span className="pipeline-m3a-emoji">{item.emoji}</span>
+          <div className="pipeline-m3-pill" key={i}>
+            <span className="pipeline-m3-emoji">{item.emoji}</span>
             <div>
-              <span className="pipeline-m3a-label">{item.label}</span>
-              <span className="pipeline-m3a-desc">{item.desc}</span>
+              <span className="pipeline-m3-label">{item.label}</span>
+              <span className="pipeline-m3-desc">{item.desc}</span>
             </div>
           </div>
         ))}
@@ -189,14 +189,14 @@ const PipelineView = ({ steps = [], plan = [] }) => {
           color: #6366f1;
         }
 
-        .pipeline-module3a-pills {
+        .pipeline-module3-pills {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
           gap: 10px;
           margin-bottom: 4px;
         }
 
-        .pipeline-m3a-pill {
+        .pipeline-m3-pill {
           display: flex;
           align-items: center;
           gap: 10px;
@@ -206,25 +206,25 @@ const PipelineView = ({ steps = [], plan = [] }) => {
           background: rgba(99, 102, 241, 0.04);
         }
 
-        .pipeline-m3a-emoji {
+        .pipeline-m3-emoji {
           font-size: 18px;
           line-height: 1;
           flex-shrink: 0;
         }
 
-        .pipeline-m3a-pill div {
+        .pipeline-m3-pill div {
           display: flex;
           flex-direction: column;
           gap: 1px;
         }
 
-        .pipeline-m3a-label {
+        .pipeline-m3-label {
           font-size: 12px;
           font-weight: 600;
           color: var(--text);
         }
 
-        .pipeline-m3a-desc {
+        .pipeline-m3-desc {
           font-size: 11px;
           color: var(--text-dim);
         }

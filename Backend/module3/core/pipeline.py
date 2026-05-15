@@ -7,16 +7,16 @@ from ..services.chart_engine import generate_charts
 from ..services.insight_engine import generate_insights
 from ..services.explanation_engine import explain
 from ..services.chat_engine import chat
-from ..models.response_model import Module3AResult, DatasetSummary
+from ..models.response_model import Module3Result, DatasetSummary
 
-def run_module3A(
+def run_module3(
     module1_output: dict,
     module2_output: dict,
     df: pd.DataFrame,
     user_query: str = "Give me a summary of this dataset",
     llm_provider: str = "openai",
     api_key: str = None,
-) -> Module3AResult:
+) -> Module3Result:
     
     from module1.utils.llm_client import get_groq_client
     try:
@@ -58,7 +58,7 @@ def run_module3A(
         datetime_columns=context.datetime_columns
     )
 
-    return Module3AResult(
+    return Module3Result(
         charts=charts,
         insights=insights,
         explanations=explanation,

@@ -27,7 +27,9 @@ class ChatAgent:
             "recommendation_summary": [
                 r.get("action") for r in context_data.get("recommendation", {}).get("recommendations", [])[:3]
             ],
-            "risk_summary": context_data.get("risk", {}).get("risk_score", 0.0)
+            "risk_summary": context_data.get("risk", {}).get("risk_score", 0.0),
+            "executive_decision": context_data.get("decision", {}).get("executive_summary", ""),
+            "action_plan": context_data.get("decision", {}).get("action_plan", [])
         }
         
         user_prompt = f"Context from the AI platform:\n{json.dumps(safe_context, indent=2)}\n\nUser Question: {user_message}\n\nPlease provide a helpful business-oriented response."

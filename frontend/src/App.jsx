@@ -13,8 +13,8 @@ const pipelinePhases = [
   { icon: Sparkles, label: 'AI planning pipeline...', detail: 'Choosing optimal cleaning & encoding strategy' },
   { icon: Layers, label: 'Executing pipeline...', detail: 'Imputing, encoding, scaling — building ML-ready dataset' },
   { icon: ShieldCheck, label: 'Assembling results...', detail: 'Packaging datasets, artifacts, and quality report' },
-  { icon: Target, label: 'AI Analyst Generation (Mod 3A)...', detail: 'Extracting strategic insights and natural language reports' },
-  { icon: TrendingUp, label: 'Decision Intelligence Prep (Mod 3B)...', detail: 'Readying AutoML predictive pipelines and RCA structures' },
+  { icon: Target, label: 'AI Analyst Generation (Mod 3)...', detail: 'Extracting strategic insights and natural language reports' },
+  { icon: TrendingUp, label: 'Decision Intelligence Prep (Mod 4)...', detail: 'Readying AutoML predictive pipelines and RCA structures' },
 ];
 
 function App() {
