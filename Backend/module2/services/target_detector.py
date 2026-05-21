@@ -73,17 +73,15 @@ def detect_target(
     module1_output: dict
 ) -> Tuple[str, str, float]:
     """
-    Identify the target column.
+    Identifies the most probable target column for predictive modeling tasks using heuristic and semantic checks.
 
     Args:
-        df_columns     : List of column names in the DataFrame
-        module1_output : Full output dict from Module 1
+        df_columns (list): List of all available column names in the dataset.
+        module1_output (dict): The complete context dictionary produced by Module 1.
 
     Returns:
-        (target_column, detection_method, confidence_score)
-        target_column    → name of the detected target column
-        detection_method → how it was found (for logging)
-        confidence_score → 0.0 to 1.0 (how sure we are)
+        Tuple[str, str, float]: A tuple containing the detected target column name, the rationale/method of detection, 
+                                and a confidence score between 0.0 and 1.0.
     """
     col_meanings  = module1_output.get("column_meanings", {})
     ai_summary    = module1_output.get("ai_summary", "").lower()
@@ -149,12 +147,16 @@ def get_feature_columns(
     module1_output: dict
 ) -> Tuple[list, list]:
     """
-    Split columns into features and columns to drop.
+    Splits dataset columns into active predictive features and columns to drop (such as identifiers).
+
+    Args:
+        df_columns (list): List of all column names in the dataset.
+        target_col (str): The identified target column, which is excluded from features.
+        module1_output (dict): The full context dictionary from Module 1.
 
     Returns:
-        (feature_columns, dropped_columns)
-        feature_columns → columns to keep as model inputs
-        dropped_columns → ID cols, all-text cols, etc.
+        Tuple[list, list]: A tuple where the first element is the list of feature column names to keep, 
+                           and the second is the list of column names to drop.
     """
     col_meanings = module1_output.get("column_meanings", {})
     schema       = module1_output.get("data_schema", {})
@@ -180,19 +182,48 @@ def get_feature_columns(
 
 
 def _is_non_target(col_name: str, col_meanings: dict) -> bool:
-    """Returns True if this column is clearly NOT a target."""
+    """
+    Determines if a column is definitively not a target based on its name and semantic meaning.
+
+    Args:
+        col_name (str): The name of the column.
+        col_meanings (dict): A dictionary mapping column names to their natural language semantic meanings.
+
+    Returns:
+        bool: True if the column contains non-target identifiers (like dates, IDs, or comments), False otherwise.
+    """
     text = f"{col_name.lower()} {col_meanings.get(col_name, '').lower()}"
     return any(re.search(rf'\b{re.escape(kw)}\b', text) for kw in NON_TARGET_KEYWORDS)
 
 
 def _is_id_column(col_name: str, col_meanings: dict) -> bool:
+    """
+    Checks if a column acts as an identifier based on common naming conventions and semantic meanings.
+
+    Args:
+        col_name (str): The name of the column.
+        col_meanings (dict): A dictionary of column semantic meanings.
+
+    Returns:
+        bool: True if the column is identified as an ID, UUID, or primary key.
+    """
     id_keywords = ["id", "index", "uuid", "key", "identifier"]
     text = f"{col_name.lower()} {col_meanings.get(col_name, '').lower()}"
     return any(re.search(rf'\b{re.escape(kw)}\b', text) for kw in id_keywords)
 
 
 def _extract_context(text: str, keyword: str, window: int = 60) -> str:
-    """Extract text around a keyword for context scanning."""
+    """
+    Extracts a text snippet surrounding a specific keyword for contextual semantic scanning.
+
+    Args:
+        text (str): The source text to scan.
+        keyword (str): The specific keyword to locate within the text.
+        window (int, optional): The number of characters to extract before and after the keyword. Defaults to 60.
+
+    Returns:
+        str: A substring representing the local context of the keyword, or an empty string if the keyword is not found.
+    """
     idx = text.find(keyword)
     if idx == -1:
         return ""

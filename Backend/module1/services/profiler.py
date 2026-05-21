@@ -73,8 +73,15 @@ NUMERIC_SENTINEL_VALUES = {999, 9999, -999, -9999, -1}
 
 def normalize_nulls(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Replace all disguised null values with real NaN
-    so that isna() catches everything.
+    Replaces disguised null values (e.g., 'NA', '?', '-999') with real NaNs.
+    
+    This helps pandas correctly identify and compute missing value metrics.
+    
+    Args:
+        df (pd.DataFrame): The input DataFrame.
+        
+    Returns:
+        pd.DataFrame: A new DataFrame with normalized null values.
     """
     # Step 1 — replace known string nulls in object columns
     df = df.copy()
@@ -103,7 +110,13 @@ def normalize_nulls(df: pd.DataFrame) -> pd.DataFrame:
 
 def profile_dataset(df: pd.DataFrame) -> DataQuality:
     """
-    Profile data quality AFTER normalizing disguised nulls.
+    Profiles data quality by computing missing values and duplicates.
+    
+    Args:
+        df (pd.DataFrame): The input DataFrame to be profiled.
+        
+    Returns:
+        DataQuality: A pydantic model containing missing value counts, percentages, duplicate rows, and total row count.
     """
     # Normalize first — catch all types of null
     df_clean = normalize_nulls(df)
@@ -131,7 +144,15 @@ def profile_dataset(df: pd.DataFrame) -> DataQuality:
 
 
 def get_basic_stats(df: pd.DataFrame) -> dict:
-    """Stats after null normalization."""
+    """
+    Computes summary statistics for numeric columns in the dataset.
+    
+    Args:
+        df (pd.DataFrame): The input DataFrame.
+        
+    Returns:
+        dict: A dictionary of summary statistics, suitable for JSON serialization.
+    """
     from fastapi.encoders import jsonable_encoder
     df_clean = normalize_nulls(df)
     numeric_cols = df_clean.select_dtypes(include="number")
@@ -158,7 +179,15 @@ def generate_cleaning_suggestions(
     column_meanings: dict[str, str],
 ) -> list[str]:
     """
-    Suggest column name and type fixes to the user.
+    Suggests column name and data type fixes to the user based on heuristics.
+    
+    Args:
+        df (pd.DataFrame): The input DataFrame.
+        schema (dict[str, list[str]]): The identified dataset schema.
+        column_meanings (dict[str, str]): The inferred meanings of the columns.
+        
+    Returns:
+        list[str]: A list of actionable cleaning suggestions.
     """
     suggestions = []
 
@@ -211,8 +240,13 @@ def generate_cleaning_suggestions(
 
 def _is_unreadable_name(col: str) -> bool:
     """
-    Returns True if column name looks machine-generated or unreadable.
-    e.g. 'col1', 'var_001', 'x1', 'field2'
+    Determines if a column name looks machine-generated or unreadable.
+    
+    Args:
+        col (str): The column name to check.
+        
+    Returns:
+        bool: True if the name appears unreadable (e.g., 'var_001'), False otherwise.
     """
     import re
     # All lowercase single letter + number like x1, v2

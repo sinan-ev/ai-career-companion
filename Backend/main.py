@@ -60,6 +60,14 @@ from module1.models.response_model import AnalysisResponse
 from module2.models.module2_response import Module2Response
 
 class UnifiedResponse(BaseModel):
+    """
+    Response model unifying outputs from Module 1 and Module 2.
+    
+    Attributes:
+        module1 (AnalysisResponse): Results from the data understanding phase.
+        module2 (Module2Response): Results from the data cleaning and preparation phase.
+        dataset_id (Optional[str]): Unique identifier for the processed dataset, if applicable.
+    """
     module1: AnalysisResponse
     module2: Module2Response
     dataset_id: Optional[str] = None
@@ -69,10 +77,20 @@ async def process_dataset(
     file: UploadFile = File(...)
 ):
     """
-    Unified endpoint that performs:
+    Unified endpoint that performs data understanding and cleaning.
+    
     1. Data Understanding (Module 1)
     2. Deep EDA & Intelligent Cleaning (Module 2)
     3. Exporting Analytics & ML-ready datasets (to /downloads/)
+    
+    Args:
+        file (UploadFile): The uploaded dataset file (CSV or Excel).
+        
+    Returns:
+        UnifiedResponse: An object containing results from both Module 1 and Module 2, along with a dataset ID.
+        
+    Raises:
+        HTTPException: If the file is not provided, unsupported, empty, or if processing fails.
     """
     if not file.filename:
         raise HTTPException(status_code=400, detail="No file provided")
@@ -146,6 +164,12 @@ async def process_dataset(
 
 @app.get("/health")
 async def health():
+    """
+    Health check endpoint to verify the API is running.
+    
+    Returns:
+        dict: A dictionary containing the status, active modules, application name, and version.
+    """
     return {
         "status": "ok", 
         "modules": ["understanding", "cleaning"],

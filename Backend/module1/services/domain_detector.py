@@ -10,8 +10,17 @@ def detect_domain(
     profiler_summary: dict,
 ) -> tuple[str, str]:
     """
-    Hybrid domain detection: rules first, Gemini if uncertain.
-    Returns (domain, dataset_type).
+    Identifies the domain and dataset type of the given dataset.
+    
+    Uses a hybrid approach: first attempts a rule-based matching using keywords. If uncertain, it falls back to an AI-based detection.
+    
+    Args:
+        columns (list[str]): List of column names.
+        column_meanings (dict[str, str]): Mapping of column names to their inferred meanings.
+        profiler_summary (dict): Profiling summary containing dataset quality metrics.
+        
+    Returns:
+        tuple[str, str]: A tuple containing the detected domain (e.g., 'Healthcare') and dataset type (e.g., 'Medical / Clinical Data').
     """
     cleaned_cols = [clean_column_name(c) for c in columns]
 
@@ -32,6 +41,15 @@ def detect_domain(
 
 
 def _get_dataset_type(domain: str) -> str:
+    """
+    Maps a detected domain to a specific dataset type category.
+    
+    Args:
+        domain (str): The primary domain detected.
+        
+    Returns:
+        str: The mapped dataset type.
+    """
     type_map = {
         "titanic": "Survival Analysis",
         "sales": "Sales & Revenue Analysis",
@@ -48,7 +66,16 @@ def _ai_domain_detection(
     columns: list[str],
     column_meanings: dict[str, str],
 ) -> tuple[str, str]:
-    """Gemini identifies domain when rules aren't confident."""
+    """
+    Fallback AI mechanism to detect domain and dataset type.
+    
+    Args:
+        columns (list[str]): The dataset's columns.
+        column_meanings (dict[str, str]): The inferred meanings of the columns.
+        
+    Returns:
+        tuple[str, str]: Detected domain and dataset type from the LLM.
+    """
 
     meanings_text = "\n".join(
         f"  - {col}: {meaning}"

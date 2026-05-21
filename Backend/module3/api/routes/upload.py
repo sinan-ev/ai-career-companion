@@ -10,6 +10,24 @@ datasets = {}
 
 @router.post("/upload")
 async def upload_dataset(file: UploadFile = File(...)):
+    """
+    Uploads and parses a dataset file (CSV, Excel, or JSON) and stores it in-memory.
+
+    Args:
+        file (UploadFile): The uploaded file from the request form body.
+
+    Returns:
+        dict: A dictionary containing:
+            - dataset_id (str): Generated UUID for referencing this dataset in subsequent requests.
+            - preview (list): A list of dictionaries representing the first 10 rows.
+            - columns (list): List of column names in the dataset.
+            - row_count (int): Total number of rows parsed from the dataset.
+
+    Raises:
+        HTTPException:
+            - 415 (Unsupported file format) if the extension is not csv, xlsx, xls, or json.
+            - 400 (Bad Request) if any exception occurs during pandas parsing.
+    """
     suffix = file.filename.split(".")[-1].lower()
     if suffix not in ["csv", "xlsx", "xls", "json"]:
         raise HTTPException(status_code=415, detail="Unsupported file format")

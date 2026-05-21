@@ -8,7 +8,17 @@ logger = logging.getLogger(__name__)
 
 def load_module1_outputs(base_path: str = "../module_1/outputs") -> Dict[str, Any]:
     """
-    Load cleaned dataset and metadata from Module 1.
+    Loads cleaned dataset, column metadata, and quality reports from Module 1.
+
+    Args:
+        base_path (str, optional): The base directory path where Module 1 outputs are stored.
+            Defaults to "../module_1/outputs".
+
+    Returns:
+        Dict[str, Any]: A dictionary containing:
+            - "dataset" (pd.DataFrame): The loaded cleaned dataset DataFrame, or an empty DataFrame if not found.
+            - "column_metadata" (Dict[str, Any]): The column metadata dictionary, or empty if not found.
+            - "quality_report" (Dict[str, Any]): The data quality report dictionary, or empty if not found.
     """
     dataset_path = os.path.join(base_path, "cleaned_dataset.csv")
     metadata_path = os.path.join(base_path, "column_metadata.json")
@@ -44,7 +54,16 @@ def load_module1_outputs(base_path: str = "../module_1/outputs") -> Dict[str, An
 
 def load_module2_outputs(base_path: str = "../module_2/outputs") -> Dict[str, Any]:
     """
-    Load ML-ready dataset from Module 2.
+    Loads the machine learning-ready dataset and feature engineering report from Module 2.
+
+    Args:
+        base_path (str, optional): The base directory path where Module 2 outputs are stored.
+            Defaults to "../module_2/outputs".
+
+    Returns:
+        Dict[str, Any]: A dictionary containing:
+            - "ml_dataset" (pd.DataFrame): The loaded ML-ready dataset, or an empty DataFrame if not found.
+            - "feature_report" (Dict[str, Any]): The feature engineering report, or empty if not found.
     """
     dataset_path = os.path.join(base_path, "ml_ready_dataset.csv")
     report_path = os.path.join(base_path, "feature_engineering_report.json")
@@ -72,7 +91,17 @@ def load_module2_outputs(base_path: str = "../module_2/outputs") -> Dict[str, An
 
 def load_module3_outputs(base_path: str = "../module_3/outputs") -> Dict[str, Any]:
     """
-    Load AI insights and RAG results from Module 3.
+    Loads AI insights, retrieval-augmented generation (RAG) results, and analysis summaries from Module 3.
+
+    Args:
+        base_path (str, optional): The base directory path where Module 3 outputs are stored.
+            Defaults to "../module_3/outputs".
+
+    Returns:
+        Dict[str, Any]: A dictionary containing:
+            - "insights" (List[Any]): List of data-driven insights, or empty if not found.
+            - "rag_results" (List[Any]): List of RAG query results, or empty if not found.
+            - "analysis_summary" (Dict[str, Any]): The statistical/business analysis summary, or empty if not found.
     """
     insights_path = os.path.join(base_path, "insights.json")
     rag_path = os.path.join(base_path, "rag_results.json")
@@ -109,7 +138,17 @@ def load_module3_outputs(base_path: str = "../module_3/outputs") -> Dict[str, An
 
 def route_data(data: List[Dict[str, Any]], source: str = "request") -> pd.DataFrame:
     """
-    Convert incoming request data (list of dicts) to DataFrame.
+    Converts incoming list of dictionary records into a pandas DataFrame and validates it.
+
+    Args:
+        data (List[Dict[str, Any]]): The input dataset as a list of dictionaries.
+        source (str, optional): The origin source of the data. Defaults to "request".
+
+    Raises:
+        ValueError: If the input data list is empty or fails structural validation.
+
+    Returns:
+        pd.DataFrame: The validated and constructed pandas DataFrame.
     """
     if not data:
         raise ValueError("Data is empty.")
@@ -124,7 +163,18 @@ def route_data(data: List[Dict[str, Any]], source: str = "request") -> pd.DataFr
 
 def validate_dataset(df: pd.DataFrame, min_rows: int = 5) -> Tuple[bool, str]:
     """
-    Checks: min row count, no fully empty columns, at least 2 columns.
+    Validates the structural requirements of a dataset.
+
+    Verifies that the dataset meets minimum row and column count thresholds,
+    and logs a warning if any columns are entirely empty.
+
+    Args:
+        df (pd.DataFrame): The pandas DataFrame to validate.
+        min_rows (int, optional): The minimum number of rows required. Defaults to 5.
+
+    Returns:
+        Tuple[bool, str]: A tuple where the first element indicates whether the validation
+            passed (True) or failed (False), and the second element is a descriptive status message.
     """
     if len(df) < min_rows:
         return False, f"Dataset has {len(df)} rows, minimum required is {min_rows}."

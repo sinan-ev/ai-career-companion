@@ -26,6 +26,23 @@ def chat(
     llm_client,
     history: List[Dict] = None
 ) -> str:
+    """
+    Executes a comprehensive conversational interaction against the dataset context and RAG engine.
+
+    Includes input validation, context retrieval validation, tool action validation,
+    multi-agent generation verification (generator, faithfulness, critic), and fallback nets.
+
+    Args:
+        query (str): The user's prompt or question.
+        retriever (Retriever): Retriever instance used to search vector embeddings.
+        df (pd.DataFrame): The active dataset dataframe.
+        context (DataContext): Data context carrying metadata details.
+        llm_client: The initialized language model client.
+        history (List[Dict], optional): History messages. Defaults to None.
+
+    Returns:
+        str: Conversational reply including confidence score.
+    """
     validator = ValidationEngine(llm_client)
     
     # 1. INPUT VALIDATION
@@ -118,6 +135,16 @@ def chat(
     return "I am sorry, but I was unable to generate a valid answer after multiple attempts."
 
 def _maybe_run_pandas(query: str, df: pd.DataFrame) -> Optional[str]:
+    """
+    Checks if a query contains keywords suggestive of an analytical/aggregation request.
+
+    Args:
+        query (str): User query.
+        df (pd.DataFrame): Dataset dataframe.
+
+    Returns:
+        Optional[str]: Mock calculation results if keywords are matched, else None.
+    """
     keywords = ["how many", "average", "total", "max", "min", "count", "sum", "percentage", "ratio"]
     if any(k in query.lower() for k in keywords):
         return "Calculated result from Pandas: 42"

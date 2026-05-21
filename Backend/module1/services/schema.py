@@ -3,8 +3,16 @@ import pandas as pd
 
 def detect_schema(df: pd.DataFrame) -> dict[str, list[str]]:
     """
-    Classify every column into: numeric, categorical, datetime, unknown.
-    Also attempts to parse object columns that look like dates.
+    Analyzes the DataFrame to classify each column by its primary data type.
+    
+    The function classifies columns into four categories: numeric, datetime, categorical, and unknown.
+    It attempts to parse object columns that resemble dates before falling back to categorical.
+    
+    Args:
+        df (pd.DataFrame): The input DataFrame.
+        
+    Returns:
+        dict[str, list[str]]: A dictionary mapping type labels ('numeric', 'categorical', 'datetime', 'unknown') to lists of column names.
     """
     schema = {
         "numeric": [],
@@ -41,7 +49,15 @@ def detect_schema(df: pd.DataFrame) -> dict[str, list[str]]:
 
 
 def _looks_like_datetime(series: pd.Series) -> bool:
+    """
+    Heuristic to determine if a pandas Series primarily contains datetime information.
     
+    Args:
+        series (pd.Series): The column data to analyze.
+        
+    Returns:
+        bool: True if the column can be successfully parsed as datetime, False otherwise.
+    """
     sample = series.dropna().head(50)
     if len(sample) == 0:
         return False
@@ -56,8 +72,15 @@ def _looks_like_datetime(series: pd.Series) -> bool:
 
 def _looks_like_categorical(series: pd.Series) -> bool:
     """
-    A column is categorical if it has low cardinality
-    relative to total rows (< 10% unique or < 20 unique values).
+    Heuristic to determine if a pandas Series is categorical based on cardinality.
+    
+    A column is considered categorical if it has low cardinality relative to the total number of rows.
+    
+    Args:
+        series (pd.Series): The column data to analyze.
+        
+    Returns:
+        bool: True if the column is likely categorical, False otherwise.
     """
     n_unique = series.nunique()
     n_total = len(series)

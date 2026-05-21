@@ -11,7 +11,16 @@ def explain_columns(
 ) -> dict[str, str]:
     """
     For every column, produce a plain-English meaning.
-    Stage 1+2: keyword map. Stage 3: Gemini fallback.
+    
+    It first attempts a keyword-based mapping. If unresolved, it uses an AI fallback to determine the meaning.
+    
+    Args:
+        columns (list[str]): List of column names to explain.
+        schema (dict[str, list[str]]): The dataset schema dictating column types.
+        sample_values (dict[str, list]): A mapping of columns to sample values for context.
+        
+    Returns:
+        dict[str, str]: A mapping of column names to their inferred plain-English meanings.
     """
     meanings: dict[str, str] = {}
     unresolved: list[str] = []
@@ -31,6 +40,15 @@ def explain_columns(
 
 
 def _keyword_lookup(col: str) -> str | None:
+    """
+    Looks up a column's meaning using predefined keyword mappings.
+    
+    Args:
+        col (str): The column name to check.
+        
+    Returns:
+        str | None: The mapped meaning if found, else None.
+    """
     cleaned = clean_column_name(col)
 
     if cleaned in COLUMN_KEYWORD_MAP:
@@ -99,8 +117,17 @@ def _ai_fallback(
     sample_values: dict[str, list],
 ) -> dict[str, str]:
     """
-    Stage 3: Groq explains all unresolved columns in one call.
-    Uses strict JSON parsing with multiple fallback strategies.
+    Fallback mechanism that queries the LLM to explain unresolved columns.
+    
+    Uses strict JSON parsing with multiple fallback strategies to extract responses.
+    
+    Args:
+        unresolved (list[str]): List of column names that could not be explained via keywords.
+        schema (dict[str, list[str]]): The dataset schema.
+        sample_values (dict[str, list]): Sample data to help the LLM infer meanings.
+        
+    Returns:
+        dict[str, str]: A dictionary of column names to their AI-generated meanings.
     """
     sample_context = ""
     for col in unresolved:
@@ -196,8 +223,16 @@ def _validate_meanings(
     unresolved: list[str]
 ) -> dict[str, str]:
     """
-    Ensure every unresolved column has an entry.
-    Fill missing ones with fallback text.
+    Ensures every unresolved column has an entry in the AI response.
+    
+    Fills in missing or empty entries with a fallback text.
+    
+    Args:
+        result (dict): The parsed JSON result from the AI.
+        unresolved (list[str]): The original list of unresolved columns.
+        
+    Returns:
+        dict[str, str]: A complete mapping of unresolved columns to meanings.
     """
     validated = {}
     for col in unresolved:

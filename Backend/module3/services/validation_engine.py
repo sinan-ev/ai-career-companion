@@ -26,13 +26,32 @@ import json
 
 
 class ValidationEngine:
+    """
+    A validation engine designed to enforce safety, alignment, groundedness, and quality
+    across different steps of the RAG and analysis generation pipeline.
+    """
     def __init__(self, llm_client=None):
+        """
+        Initializes the ValidationEngine with an optional LLM client.
+
+        Args:
+            llm_client (optional): The language model client. Defaults to None.
+        """
         self.llm_client = llm_client
         from module1.config import get_settings
         self.model = get_settings().groq_model
 
     # 1. INPUT VALIDATION
     def validate_input(self, query: str) -> bool:
+        """
+        Validates user query input to detect unsafe keywords, prompt injection, or too short queries.
+
+        Args:
+            query (str): The user's question or input prompt.
+
+        Returns:
+            bool: True if input is safe and valid, False otherwise.
+        """
         if not query or not query.strip():
             return False
         
@@ -49,6 +68,15 @@ class ValidationEngine:
 
     # 2. RETRIEVAL VALIDATION
     def validate_retrieval(self, chunk_scores: list) -> float:
+        """
+        Validates similarity scores of retrieved context chunks to detect weak matching.
+
+        Args:
+            chunk_scores (list): List of similarity search results with score details.
+
+        Returns:
+            float: The maximum similarity score detected, or 0.0 if empty or below threshold.
+        """
         if not chunk_scores:
             return 0.0
             
@@ -60,6 +88,15 @@ class ValidationEngine:
 
     # 3. CONTEXT VALIDATION
     def validate_context(self, chunks: list) -> list:
+        """
+        De-duplicates and purges extremely short, uninformative text chunks from retrieved documents.
+
+        Args:
+            chunks (list): Raw text chunks.
+
+        Returns:
+            list: List of refined, unique, high-quality text chunks.
+        """
         # Minimum document count check & redundancy removal
         unique_chunks = list(set(chunks))
         if len(unique_chunks) == 0:
@@ -71,6 +108,17 @@ class ValidationEngine:
 
     # 4. TOOL / ACTION VALIDATION
     def validate_tool_action(self, tool_name: str, params: dict, output: any) -> bool:
+        """
+        Checks if a tool executed correctly without raising explicit errors in the output data.
+
+        Args:
+            tool_name (str): Name of the tool.
+            params (dict): Parameters passed to the tool.
+            output (any): Returned execution output of the tool.
+
+        Returns:
+            bool: True if the tool executed successfully and safely, False otherwise.
+        """
         if not tool_name or not output:
             return False
         if tool_name == "pandas_calc" and "error" in str(output).lower():
@@ -79,6 +127,16 @@ class ValidationEngine:
 
     # 5. GENERATION VALIDATION (LLM-as-a-Judge)
     def validate_generation(self, query: str, answer: str) -> float:
+        """
+        Evaluates relevance, completeness, and clarity of the generated LLM response using LLM-as-a-judge.
+
+        Args:
+            query (str): Original user query.
+            answer (str): The generated response.
+
+        Returns:
+            float: Evaluation score from 1.0 to 10.0.
+        """
         if not self.llm_client:
             return 8.0 # Default if no LLM
             
@@ -105,6 +163,16 @@ class ValidationEngine:
 
     # 6. FAITHFULNESS VALIDATION
     def validate_faithfulness(self, answer: str, context: str) -> float:
+        """
+        Checks if the generated answer is strictly grounded in the provided RAG context, to prevent hallucination.
+
+        Args:
+            answer (str): Generated answer.
+            context (str): Input RAG context string.
+
+        Returns:
+            float: Grounded score (1.0 for true, 0.0 for false, 0.5 on exception).
+        """
         if not self.llm_client:
             return 1.0 # 1.0 = Grounded
             
@@ -129,6 +197,17 @@ class ValidationEngine:
 
     # 7. CRITIC AGENT (Self-Reflection)
     def critic_agent(self, query: str, answer: str, context: str) -> dict:
+        """
+        Critiques the answer for technical jargon (SQL, Python), logical fallacies, or alignment issues, and suggests improvements.
+
+        Args:
+            query (str): User query.
+            answer (str): Candidate answer.
+            context (str): Context text.
+
+        Returns:
+            dict: Evaluation result with keys 'approved', 'feedback', and 'improved_answer'.
+        """
         if not self.llm_client:
             return {"approved": True, "feedback": "System LLM offline", "improved_answer": answer}
             
@@ -158,6 +237,17 @@ class ValidationEngine:
 
     # 8. CONFIDENCE SCORING
     def calculate_confidence(self, retrieval_score: float, generation_score: float, faithfulness: float) -> float:
+        """
+        Aggregates retrieval validation, generation validation, and faithfulness scores into a unified confidence metric.
+
+        Args:
+            retrieval_score (float): Score from validate_retrieval.
+            generation_score (float): Score from validate_generation.
+            faithfulness (float): Score from validate_faithfulness.
+
+        Returns:
+            float: Aggregated confidence score rounded to 2 decimal places.
+        """
         # Normalize generation score (0-10) to (0-1)
         gen_norm = generation_score / 10.0
         # Average the three signals

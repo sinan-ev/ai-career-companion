@@ -2,7 +2,20 @@ from datetime import datetime
 from typing import Dict, Any
 
 class ReportGenerator:
+    """
+    Generates structured plain-text and JSON reports from the engine execution state.
+    """
     def generate(self, state: Dict[str, Any]) -> str:
+        """
+        Generates a detailed, human-readable plain-text executive report summarizing all analysis results.
+
+        Args:
+            state (Dict[str, Any]): The execution state containing predictions, forecasts,
+                root cause analysis, risks, recommendations, and decisions, along with confidences.
+
+        Returns:
+            str: The formatted plain-text decision intelligence report.
+        """
         job_id = state.get("job_id", "unknown")
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         overall_conf = state.get("overall_confidence", {})
@@ -116,6 +129,16 @@ class ReportGenerator:
         return report
 
     def generate_json(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Extracts and structures all execution outputs from the state into a clean JSON-serializable dictionary.
+
+        Args:
+            state (Dict[str, Any]): The active pipeline execution state.
+
+        Returns:
+            Dict[str, Any]: A dictionary detailing predictions, forecasts, RCA, risk assessment,
+                recommendations, and final strategic decisions.
+        """
         return {
             "job_id": state.get("job_id"),
             "prediction": state.get("prediction_result"),

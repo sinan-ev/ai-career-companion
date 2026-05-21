@@ -4,13 +4,28 @@ from module1.utils.constants import ALLOWED_EXTENSIONS
 
 
 class ValidationError(Exception):
+    """
+    Custom exception raised for fatal validation errors during dataset loading.
+    """
     pass
 
 
 def validate_dataset(df: pd.DataFrame, filename: str) -> list[str]:
     """
-    Run all validation checks. Returns a list of warnings (non-fatal).
-    Raises ValidationError on fatal problems.
+    Validates the structural integrity of the uploaded dataset.
+    
+    Checks for unsupported file extensions, empty datasets, missing columns, and duplicate column names.
+    Generates non-fatal warnings for small datasets, overly wide datasets, or columns with high missing rates.
+    
+    Args:
+        df (pd.DataFrame): The dataset to validate.
+        filename (str): The name of the file uploaded.
+        
+    Returns:
+        list[str]: A list of non-fatal warning messages.
+        
+    Raises:
+        ValidationError: If the dataset has fatal issues that prevent further processing.
     """
 
     warnings = []

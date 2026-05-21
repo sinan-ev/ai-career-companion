@@ -5,8 +5,17 @@ import os
 
 def generate_plan(context: DataContext, llm_client) -> list[str]:
     """
-    Generate analysis plan using LLM + prompt file.
-    Falls back to default plan if LLM is unavailable.
+    Generates a strategic data analysis plan using an LLM based on dataset context.
+
+    If the LLM client is unavailable or an error occurs during execution, this function 
+    safely falls back to a default standard analysis plan.
+
+    Args:
+        context (DataContext): The structured semantic and structural knowledge of the dataset.
+        llm_client: The initialized language model client for prompt execution.
+
+    Returns:
+        list[str]: A list of strategic analysis topics (e.g., ["distribution", "comparison"]).
     """
 
     #  Fallback if no LLM
@@ -68,6 +77,19 @@ def generate_plan(context: DataContext, llm_client) -> list[str]:
 
 
 def validate_plan(plan: list[str], context: DataContext) -> list[str]:
+    """
+    Validates and purges unfeasible analysis steps from the generated plan.
+
+    For example, it removes 'time_series' if no datetime columns exist, or 'correlation' 
+    if there are fewer than two numeric columns.
+
+    Args:
+        plan (list[str]): The initial list of analysis steps.
+        context (DataContext): The dataset context used to verify data feasibility.
+
+    Returns:
+        list[str]: A refined, executable list of analysis steps.
+    """
     valid_plan = []
 
     for item in plan:
@@ -88,6 +110,15 @@ def validate_plan(plan: list[str], context: DataContext) -> list[str]:
 
 
 def plan_to_queries(plan: list[str]) -> list[str]:
+    """
+    Translates short logical plan steps into explicit RAG search queries.
+
+    Args:
+        plan (list[str]): A list of short analysis step names (e.g., 'trend').
+
+    Returns:
+        list[str]: A list of detailed natural language queries for vector similarity search.
+    """
     mapping = {
         "trend": "trend patterns over time in this dataset",
         "comparison": "category comparison group differences",
@@ -98,3 +129,5 @@ def plan_to_queries(plan: list[str]) -> list[str]:
     }
 
     return [mapping.get(p, p) for p in plan]
+
+    

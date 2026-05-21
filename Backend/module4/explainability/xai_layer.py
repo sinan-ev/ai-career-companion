@@ -7,7 +7,22 @@ from typing import Dict, Any, List
 from schemas.models import ConfidenceScore
 
 class XAILayer:
+    """
+    Explainability layer aggregating SHAP and LIME interpretability techniques
+    alongside native model feature importances to generate global and local prediction explanations.
+    """
     def explain_with_shap(self, model, X: pd.DataFrame, task_type: str) -> Dict[str, Any]:
+        """
+        Computes global SHAP feature importances across all provided samples.
+
+        Args:
+            model: Trained tree-based model compatible with shap.TreeExplainer.
+            X (pd.DataFrame): Feature matrix to explain.
+            task_type (str): Either "classification" or "regression".
+
+        Returns:
+            Dict[str, Any]: Dictionary mapping global importance values, top feature rankings, and summary text.
+        """
         try:
             explainer = shap.TreeExplainer(model)
             shap_values = explainer.shap_values(X)

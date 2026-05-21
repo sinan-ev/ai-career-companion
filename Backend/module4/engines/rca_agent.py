@@ -14,7 +14,22 @@ warnings.filterwarnings("ignore", category=UserWarning, module="shap")
 warnings.filterwarnings("ignore", category=UserWarning, module="lightgbm")
 
 class RCAAgent:
+    """
+    Root Cause Analysis (RCA) explainability agent.
+
+    Fits target-specific LightGBM trees and uses SHAP values across subset splits to calculate
+    stable feature importance variance and discover primary causal drivers.
+    """
     def _compute_confidence(self, shap_variance: float) -> ConfidenceScore:
+        """
+        Computes a reliability score for the root cause factors based on importance variance across splits.
+
+        Args:
+            shap_variance (float): The mean standard-deviation-to-importance ratio among top features.
+
+        Returns:
+            ConfidenceScore: Complete structural confidence details and suggestions.
+        """
         try:
             score = max(0.3, 1.0 - (shap_variance * 10))
             score = float(np.clip(score, 0.0, 1.0))
@@ -53,6 +68,20 @@ class RCAAgent:
         )
 
     def analyse(self, data: List[Dict[str, Any]], target_column: str, problem: str) -> Dict[str, Any]:
+        """
+        Executes a multi-subset SHAP tree analysis to compute robust causal feature impacts.
+
+        Fits model classifiers/regressors, runs SHAP explainers across train splits, sorts top features,
+        synthesizes causal texts, and queries the LLM for Chief Strategy narrative translations.
+
+        Args:
+            data (List[Dict[str, Any]]): List of raw records to process.
+            target_column (str): The prediction target column.
+            problem (str): Text explanation of the analytical problem statement.
+
+        Returns:
+            Dict[str, Any]: RCA summary mapping top features list, causal chains, strategy narratives, and scores.
+        """
         try:
             df = route_data(data)
             

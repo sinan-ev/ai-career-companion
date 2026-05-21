@@ -5,8 +5,16 @@ import re
 
 def clean_column_name(col: str) -> str:
     """
-    Normalize a column name for keyword matching.
-    e.g. 'PassengerId' → 'passengerid', 'fare_amount' → 'fare_amount'
+    Normalizes a column name to facilitate keyword matching.
+    
+    Converts the name to lowercase, replaces non-alphanumeric characters with underscores, 
+    and removes redundant underscores.
+    
+    Args:
+        col (str): The raw column name.
+        
+    Returns:
+        str: The cleaned and normalized column name.
     """
     col = col.lower().strip()
     col = re.sub(r"[^a-z0-9_]", "_", col)
@@ -16,9 +24,15 @@ def clean_column_name(col: str) -> str:
 
 def extract_keywords(col: str) -> list[str]:
     """
-    Split a column name into component keywords.
-    e.g. 'hire_date' → ['hire', 'date']
-         'CustomerID' → ['customer', 'id']
+    Splits a complex column name into component keywords.
+    
+    Handles CamelCase and snake_case formats.
+    
+    Args:
+        col (str): The raw column name.
+        
+    Returns:
+        list[str]: A list of lowercase keywords extracted from the column name.
     """
     col = re.sub(r"([A-Z])", r"_\1", col).lower()
     parts = re.split(r"[^a-z0-9]", col)

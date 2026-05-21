@@ -25,6 +25,18 @@ async def run_pipeline(file: UploadFile = None, df: pd.DataFrame = None, filenam
     Flow:
         load → validate → schema → sample → profile
         → column intelligence → domain → AI agent → response
+
+    Args:
+        file (UploadFile, optional): The uploaded file to process. Defaults to None.
+        df (pd.DataFrame, optional): Pre-loaded pandas DataFrame to process. Defaults to None.
+        filename (str, optional): Name of the file being processed. Defaults to None.
+
+    Returns:
+        AnalysisResponse: A comprehensive analysis containing dataset info, schema, quality metrics, 
+                          column intelligence, domain detection, and AI-generated summaries.
+
+    Raises:
+        ValueError: If neither 'file' nor 'df' is provided.
     """
 
     # ── Stage 1: Load ──────────────────────────────────────────

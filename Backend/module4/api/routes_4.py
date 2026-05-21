@@ -18,7 +18,15 @@ from ingestion.data_router import validate_dataset, route_data
 import numpy as np
 
 def sanitize_json(data):
-    """Recursively replace non-JSON compliant floats (NaN, Inf, -Inf) with 0.0."""
+    """
+    Recursively replaces non-JSON compliant floats (NaN, Inf, -Inf) with 0.0.
+
+    Args:
+        data (any): The dictionary, list, float, or other data to sanitize.
+
+    Returns:
+        any: JSON-compliant representation of the input.
+    """
     if isinstance(data, dict):
         return {k: sanitize_json(v) for k, v in data.items()}
     elif isinstance(data, list):
@@ -47,6 +55,12 @@ monitor = ModelMonitor()
 
 @app.get("/")
 async def root():
+    """
+    Serves the root landing endpoint for the Module 4 API.
+
+    Returns:
+        dict: Welcome message, version info, and lists of available API routes.
+    """
     return {
         "message": "Module 4 is running",
         "version": "1.0.0",
@@ -61,6 +75,12 @@ async def root():
 
 @app.get("/health")
 async def health():
+    """
+    Retrieves system health status including enabled engines and active monitoring reports.
+
+    Returns:
+        dict: Health status dictionary.
+    """
     return {
         "status": "ok",
         "module": "4",
@@ -71,6 +91,15 @@ async def health():
 
 @app.post("/predict", response_model=PredictionResponse)
 async def predict(request: PredictionRequest):
+    """
+    Triggers prediction model training and inference on the uploaded dataset.
+
+    Args:
+        request (PredictionRequest): Pydantic model carrying data and target column name.
+
+    Returns:
+        PredictionResponse: Metrics, confidence scores, and predicted values.
+    """
     try:
         df = pd.DataFrame(request.data)
         is_valid, msg = validate_dataset(df)
@@ -89,6 +118,15 @@ async def predict(request: PredictionRequest):
 
 @app.post("/forecast", response_model=ForecastResponse)
 async def forecast(request: ForecastRequest):
+    """
+    Generates time-series predictions/forecasts for numeric values over date records.
+
+    Args:
+        request (ForecastRequest): Pydantic model carrying dataset, date column, value column, and steps.
+
+    Returns:
+        ForecastResponse: Generated future projections and interval confidence scores.
+    """
     try:
         df = pd.DataFrame(request.data)
         is_valid, msg = validate_dataset(df)
@@ -107,6 +145,15 @@ async def forecast(request: ForecastRequest):
 
 @app.post("/rca", response_model=RCAResponse)
 async def rca(request: RCARequest):
+    """
+    Runs explainability analysis (SHAP / Feature Importance) to identify predictive drivers.
+
+    Args:
+        request (RCARequest): Pydantic model carrying data, target column, and core business problem statement.
+
+    Returns:
+        RCAResponse: Identified key features, impact scores, and structured confidence info.
+    """
     try:
         df = pd.DataFrame(request.data)
         is_valid, msg = validate_dataset(df)
@@ -125,6 +172,15 @@ async def rca(request: RCARequest):
 
 @app.post("/risk", response_model=RiskResponse)
 async def risk(request: RiskRequest):
+    """
+    Scours dataset records for anomalies, outliers, and data corruption metrics.
+
+    Args:
+        request (RiskRequest): Pydantic model containing data records.
+
+    Returns:
+        RiskResponse: Computed anomalies list and numerical risk scores.
+    """
     try:
         df = pd.DataFrame(request.data)
         is_valid, msg = validate_dataset(df)
@@ -143,6 +199,15 @@ async def risk(request: RiskRequest):
 
 @app.post("/recommend", response_model=RecommendResponse)
 async def recommend(request: RecommendRequest):
+    """
+    Synthesizes prediction statistics and risks to construct prioritized actionable insights.
+
+    Args:
+        request (RecommendRequest): Pydantic model containing insights, prediction, and risk score metrics.
+
+    Returns:
+        RecommendResponse: Ranked executive actions list.
+    """
     try:
         engine = RecommendationEngine()
         result = engine.recommend(request.insights, request.prediction_confidence, request.risk_score, request.top_risk_features)
@@ -156,6 +221,15 @@ async def recommend(request: RecommendRequest):
 
 @app.post("/decide", response_model=DecisionResponse)
 async def decide(request: DecisionRequest):
+    """
+    Runs full analysis workflow synchronously to render executive-level strategic decisions.
+
+    Args:
+        request (DecisionRequest): Pydantic model containing records and analytical scope.
+
+    Returns:
+        DecisionResponse: Strategic decree, threat level assessment, and confidence insights.
+    """
     try:
         df = pd.DataFrame(request.data)
         is_valid, msg = validate_dataset(df)
@@ -190,6 +264,15 @@ async def decide(request: DecisionRequest):
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat_with_future_intelligence(request: ChatRequest):
+    """
+    Serves as conversational portal directly engaging with Module 4 Future Intelligence Core.
+
+    Args:
+        request (ChatRequest): Pydantic model containing user prompt and active execution state.
+
+    Returns:
+        ChatResponse: Structured response text.
+    """
     try:
         agent = ChatAgent()
         response_text = agent.chat(request.message, request.context)
@@ -199,6 +282,15 @@ async def chat_with_future_intelligence(request: ChatRequest):
 
 @app.post("/run-pipeline", response_model=AgentRunResponse)
 async def run_pipeline_endpoint(request: AgentRunRequest):
+    """
+    Invokes the multi-agent decision intelligence pipeline in LangGraph and generates unified reports.
+
+    Args:
+        request (AgentRunRequest): Pydantic model detailing the tabular dataset and analytical configurations.
+
+    Returns:
+        AgentRunResponse: Fully structured payload carrying prediction, forecast, risk, decision, and report metrics.
+    """
     try:
         df = pd.DataFrame(request.data)
         is_valid, msg = validate_dataset(df)
@@ -233,10 +325,26 @@ async def run_pipeline_endpoint(request: AgentRunRequest):
 
 @app.get("/pipeline-status")
 async def pipeline_status():
+    """
+    Fetches the operational history and health scorecard of the decision pipeline execution.
+
+    Returns:
+        dict: Operational summary metrics.
+    """
     return monitor.get_health_report()
 
 @app.post("/explain")
 async def explain(data: list[dict], target_column: str):
+    """
+    Computes global SHAP / feature importances for a customized XGBoost model trained on input records.
+
+    Args:
+        data (list[dict]): Tabular records to train and explain.
+        target_column (str): Target column of prediction.
+
+    Returns:
+        dict: Full SHAP summary metrics and features plots data.
+    """
     try:
         df = route_data(data)
         y = df[target_column]
@@ -264,10 +372,25 @@ async def explain(data: list[dict], target_column: str):
 
 @app.get("/monitor")
 async def get_monitor():
+    """
+    Retrieves system performance telemetry records and logs.
+
+    Returns:
+        dict: Monitor performance metadata.
+    """
     return monitor.get_health_report()
 
 @app.post("/monitor/drift")
 async def monitor_drift(data: list[dict]):
+    """
+    Runs drift detection checking PSI metrics between baseline stats and incoming dataset records.
+
+    Args:
+        data (list[dict]): New incoming dataset records.
+
+    Returns:
+        dict: Summary of feature PSI values and detected drift flags.
+    """
     try:
         df = pd.DataFrame(data)
         if not monitor.baseline_stats:

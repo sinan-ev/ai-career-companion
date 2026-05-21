@@ -7,6 +7,21 @@ def explain(
     context: DataContext,
     llm_client
 ) -> str:
+    """
+    Generates a concise, high-level business explanation summarizing the impact of dataset insights.
+
+    Utilizes the LLM to write a professional executive description, falling back to a structured
+    default template if API issues or client absence occurs.
+
+    Args:
+        insights (List[str]): List of key data-driven insights.
+        stats (Dict[str, Any]): Calculated statistical details.
+        context (DataContext): Data context carrying details about the active dataset.
+        llm_client: The initialized language model client.
+
+    Returns:
+        str: A professional 2-3 sentence executive explanation of the analytical results.
+    """
     if not llm_client:
         return "This dataset provides a solid overview of your business metrics. The strongest finding is the correlation between age and salary."
         

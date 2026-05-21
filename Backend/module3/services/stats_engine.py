@@ -5,6 +5,23 @@ from typing import Any, Dict, List
 from ..services.context_builder import DataContext
 
 def run_analysis(plan: List[str], df: pd.DataFrame, context: DataContext) -> Dict[str, Any]:
+    """
+    Executes real numerical and categorical statistical calculations on the dataset.
+
+    Calculates description distributions, pearson correlations, and grouped category
+    comparisons based on the structured dataset context to avoid any AI guessing.
+
+    Args:
+        plan (List[str]): List of strategic analysis steps.
+        df (pd.DataFrame): Active dataset dataframe.
+        context (DataContext): Structured dataset context metadata container.
+
+    Returns:
+        Dict[str, Any]: Calculated statistical results containing:
+            - distributions (dict): Descriptive statistics for meaningful numeric columns.
+            - correlations (dict): Pearson correlations between numeric columns.
+            - comparisons (dict): Grouped means and sums of numeric columns by key categorical values.
+    """
     results = {}
     
     # Analyze meaningful numeric columns

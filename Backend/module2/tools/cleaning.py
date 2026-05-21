@@ -23,6 +23,15 @@ HIGH_CARDINALITY_THRESHOLD = 20
 # ─────────────────────────────────────────────
 
 def remove_duplicates(df: pd.DataFrame) -> Tuple[pd.DataFrame, str]:
+    """
+    Identifies and removes completely duplicated rows in the dataset.
+
+    Args:
+        df (pd.DataFrame): The input pandas DataFrame.
+
+    Returns:
+        Tuple[pd.DataFrame, str]: A tuple containing the deduplicated DataFrame and a descriptive string of the action taken.
+    """
 
     before = len(df)
     df = df.drop_duplicates().reset_index(drop=True)
@@ -46,7 +55,7 @@ def handle_missing(
     module1_output: Dict[str, Any],
 ) -> Tuple[pd.DataFrame, str]:
     """
-    Impute or drop missing values using Module 1's schema and data_quality.
+    Imputes or drops missing values dynamically based on Module 1's schema and column semantic meaning.
 
     Strategy per column:
         - Drop column  → missing > 60%
@@ -58,11 +67,11 @@ def handle_missing(
         - Drop rows    → anything left after column strategies
 
     Args:
-        df             : DataFrame (already deduplicated)
-        module1_output : Full output dict from Module 1
+        df (pd.DataFrame): The input DataFrame, ideally deduplicated beforehand.
+        module1_output (Dict[str, Any]): The complete context dictionary from Module 1.
 
     Returns:
-        (cleaned_df, detail_message)
+        Tuple[pd.DataFrame, str]: A tuple containing the DataFrame with missing values handled and a detailed summary of actions.
     """
 
     schema         = module1_output.get("data_schema", {})
@@ -177,13 +186,17 @@ def handle_missing(
 
 def _choose_numeric_strategy(col_name: str, meaning: str) -> str:
     """
-    Choose median vs mean for a numeric column.
+    Determines the appropriate imputation strategy (median or mean) for a numeric column.
 
-    Uses the column's plain-English meaning from Module 1.
-    Skewed distributions (age, salary, fare) → median
-    Normal distributions (score, rating) → mean
+    Uses the column's semantic meaning from Module 1 to guess the distribution shape.
+    Variables prone to skewness (like age, salary, or fare) default to median imputation.
 
-    Falls back to median if unsure (safer — not sensitive to outliers).
+    Args:
+        col_name (str): The name of the numeric column.
+        meaning (str): The natural language semantic meaning of the column.
+
+    Returns:
+        str: The imputation strategy to use, either "median" or "mean".
     """
     text_to_check = f"{col_name.lower()} {meaning}"
     for keyword in SKEWED_MEANING_KEYWORDS:
@@ -194,8 +207,15 @@ def _choose_numeric_strategy(col_name: str, meaning: str) -> str:
 
 def get_missing_summary(df: pd.DataFrame) -> dict:
     """
-    Returns a dict of {col: missing_count} for columns with any nulls.
-    Used by agent_planner to decide if handle_missing is needed.
+    Calculates a summary of missing values for all columns containing nulls.
+
+    This summary is often used by the agent planner to decide if the missing value handler tool needs to be invoked.
+
+    Args:
+        df (pd.DataFrame): The DataFrame to evaluate.
+
+    Returns:
+        dict: A dictionary mapping column names to integer counts of missing values.
     """
     missing = df.isnull().sum()
     return {

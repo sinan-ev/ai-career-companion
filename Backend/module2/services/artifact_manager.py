@@ -69,23 +69,17 @@ def save_artifacts(
     base_dir: str = DEFAULT_ARTIFACTS_DIR,
 ) -> Dict[str, str]:
     """
-    Save encoder_map, scaler_map, and metadata to disk.
+    Serializes and saves preprocessing artifacts (encoders and scalers) alongside metadata.
 
     Args:
-        encoder_map    : From encoding.py — fitted encoding objects
-        scaler_map     : From scaling.py — fitted scaler objects
-        feature_cols   : Ordered list of feature columns (for inference)
-        module1_output : Module 1 output — used to name files and metadata
-        base_dir       : Root directory for artifacts (default: "artifacts/")
+        encoder_map (Dict[str, Any]): Dictionary of fitted encoding objects from the encoding step.
+        scaler_map (Dict[str, Any]): Dictionary of fitted scaler objects from the scaling step.
+        feature_cols (List[str]): An ordered list of features expected during inference.
+        module1_output (dict): The complete context output from Module 1.
+        base_dir (str, optional): Root directory for saving the artifact folder. Defaults to DEFAULT_ARTIFACTS_DIR.
 
     Returns:
-        {
-            "base_dir":   "artifacts/titanic_20240101_120000/",
-            "encoders":   "artifacts/titanic_20240101_120000/encoders.pkl",
-            "scalers":    "artifacts/titanic_20240101_120000/scalers.pkl",
-            "metadata":   "artifacts/titanic_20240101_120000/metadata.json",
-            "features":   "artifacts/titanic_20240101_120000/feature_list.json",
-        }
+        Dict[str, str]: A mapping of artifact keys to their absolute file paths (e.g., 'encoders', 'scalers', 'metadata').
     """
     dataset_info = module1_output.get("dataset_info", {})
     domain       = dataset_info.get("domain", "dataset").lower().replace(" ", "_")
@@ -129,19 +123,16 @@ def save_artifacts(
 
 def load_artifacts(artifact_dir: str) -> Dict[str, Any]:
     """
-    Load saved artifacts from a directory.
+    Loads saved preprocessing artifacts and metadata from disk for future inference.
 
     Args:
-        artifact_dir : Path to the artifact subfolder
-                       e.g. "artifacts/titanic_20240101_120000/"
+        artifact_dir (str): The directory containing the serialized artifact files.
 
     Returns:
-        {
-            "encoder_map":    {...},
-            "scaler_map":     {...},
-            "feature_columns": [...],
-            "metadata":       {...},
-        }
+        Dict[str, Any]: A dictionary containing the loaded 'encoder_map', 'scaler_map', 'feature_columns', and 'metadata'.
+        
+    Raises:
+        FileNotFoundError: If the specified artifact_dir does not exist.
     """
     encoders_path = os.path.join(artifact_dir, "encoders.pkl")
     scalers_path  = os.path.join(artifact_dir, "scalers.pkl")
@@ -174,11 +165,13 @@ def load_artifacts(artifact_dir: str) -> Dict[str, Any]:
 
 def list_saved_artifacts(base_dir: str = DEFAULT_ARTIFACTS_DIR) -> List[Dict[str, str]]:
     """
-    List all saved artifact sets in the base directory.
-    Useful for seeing what datasets have been processed before.
+    Lists all saved artifact sets available in the specified base directory.
+
+    Args:
+        base_dir (str, optional): The base directory containing all artifacts. Defaults to DEFAULT_ARTIFACTS_DIR.
 
     Returns:
-        List of dicts with name, path, and saved_at for each artifact set
+        List[Dict[str, str]]: A list of dictionaries detailing the path and metadata of each artifact set found.
     """
     if not os.path.exists(base_dir):
         return []
@@ -206,10 +199,23 @@ def list_saved_artifacts(base_dir: str = DEFAULT_ARTIFACTS_DIR) -> List[Dict[str
 # ─────────────────────────────────────────────
 
 def _build_metadata(
-    encoder_map, scaler_map, feature_cols,
-    module1_output, artifact_dir, timestamp
+    encoder_map: Dict[str, Any], scaler_map: Dict[str, Any], feature_cols: List[str],
+    module1_output: dict, artifact_dir: str, timestamp: str
 ) -> dict:
-    """Build human-readable metadata about the saved artifacts."""
+    """
+    Compiles human-readable metadata detailing the preprocessing artifacts created for the dataset.
+
+    Args:
+        encoder_map (Dict[str, Any]): Fitted categorical encoders.
+        scaler_map (Dict[str, Any]): Fitted numeric scalers.
+        feature_cols (List[str]): The finalized list of predictive features.
+        module1_output (dict): The complete context from Module 1.
+        artifact_dir (str): Directory where artifacts are saved.
+        timestamp (str): The ISO timestamp identifying the save action.
+
+    Returns:
+        dict: A comprehensive dictionary of metadata properties summarizing the artifacts.
+    """
 
     dataset_info = module1_output.get("dataset_info", {})
     schema       = module1_output.get("data_schema", {})

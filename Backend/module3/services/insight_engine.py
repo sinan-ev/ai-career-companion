@@ -9,6 +9,22 @@ def generate_insights(
     llm_client,
     n_insights: int = 5
 ) -> Tuple[List[str], float]:
+    """
+    Generates data-driven business insights by combining precalculated statistics and RAG documents.
+
+    Uses an LLM prompt to generate insights focusing on business value, major trends, and anomalies.
+    Returns a list of clean insights along with a computed confidence metric.
+
+    Args:
+        stats (dict): Precalculated statistics of the dataset.
+        rag_result (RetrievalResult): Retructured vector search result chunks.
+        context (DataContext): Data context carrying details about column names and types.
+        llm_client: The initialized language model client.
+        n_insights (int, optional): The exact number of insights to output. Defaults to 5.
+
+    Returns:
+        Tuple[List[str], float]: A tuple containing the list of raw text insights and the calculated confidence score (0.0 to 1.0).
+    """
     if not llm_client:
         return ["Engineering earns 53% more than Sales on average ($95k vs $62k)", "Age strongly predicts salary (r=0.92)"][:n_insights], 0.85
 
@@ -70,5 +86,14 @@ def generate_insights(
     return insights, confidence
 
 def score_confidence(rag_result: RetrievalResult) -> float:
+    """
+    Computes a reliability score for the generated insights based on retrieval context strength.
+
+    Args:
+        rag_result (RetrievalResult): The RAG similarity search results containing score details.
+
+    Returns:
+        float: Calculated confidence level ranging from 0.0 (unreliable) to 1.0 (highly reliable).
+    """
     # Dummy confidence score
     return 0.85

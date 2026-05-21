@@ -8,15 +8,42 @@ from engines.recommendation_engine import RecommendationEngine
 from engines.decision_engine import DecisionEngine
 
 class BaseAgent:
+    """
+    Abstract base class representing an autonomous agent in the Module 4 task flow.
+    """
     name: str = "BaseAgent"
     role: str = "Base Role"
     def run(self, state: dict) -> dict:
+        """
+        Executes the agent's logic on the shared workflow state.
+
+        Args:
+            state (dict): The shared workspace state mapping of values.
+
+        Returns:
+            dict: The updated workflow state dictionary.
+
+        Raises:
+            NotImplementedError: If not implemented in the subclass.
+        """
         raise NotImplementedError
 
 class PredictionAgent(BaseAgent):
+    """
+    AutoML prediction agent responsible for training models and generating forecasts/predictions.
+    """
     name = "PredictionAgent"
     role = "Run AutoML pipeline and produce predictions with confidence"
     def run(self, state: dict) -> dict:
+        """
+        Runs prediction engine over active data state.
+
+        Args:
+            state (dict): Shared dictionary containing 'data' and 'target_column'.
+
+        Returns:
+            dict: State with populated 'prediction_result'.
+        """
         try:
             engine = PredictionEngine()
             res = engine.train_and_predict(state["data"], state["target_column"])
@@ -31,9 +58,21 @@ class PredictionAgent(BaseAgent):
         return state
 
 class ForecastAgent(BaseAgent):
+    """
+    Time series forecasting agent that identifies trends over time-series coordinates.
+    """
     name = "ForecastAgent"
     role = "Detect time-series columns and forecast future trends"
     def run(self, state: dict) -> dict:
+        """
+        Runs forecasting engine over historical time series data.
+
+        Args:
+            state (dict): Shared dictionary containing 'data', 'date_column', and 'target_column'.
+
+        Returns:
+            dict: State with populated 'forecast_result'.
+        """
         if not state.get("date_column"):
             return state
             
@@ -51,9 +90,21 @@ class ForecastAgent(BaseAgent):
         return state
 
 class RCAAgent(BaseAgent):
+    """
+    Root Cause Analysis (SHAP-based explainability) agent.
+    """
     name = "RCAAgent"
     role = "Identify root causes using SHAP analysis"
     def run(self, state: dict) -> dict:
+        """
+        Runs RCA (SHAP) explainability analysis to find most predictive features.
+
+        Args:
+            state (dict): Shared dictionary containing 'data', 'target_column', and 'problem'.
+
+        Returns:
+            dict: State with populated 'rca_result'.
+        """
         try:
             engine = RCAEngine()
             res = engine.analyse(state["data"], state["target_column"], state.get("problem", "analysis"))
@@ -68,9 +119,21 @@ class RCAAgent(BaseAgent):
         return state
 
 class RiskAgent(BaseAgent):
+    """
+    Anomaly detection and overall dataset risk assessment agent.
+    """
     name = "RiskAgent"
     role = "Detect anomalies and assess dataset risk level"
     def run(self, state: dict) -> dict:
+        """
+        Detects anomalies and generates global risk assessments on inputs.
+
+        Args:
+            state (dict): Shared dictionary containing 'data'.
+
+        Returns:
+            dict: State with populated 'risk_result'.
+        """
         try:
             engine = RiskEngine()
             res = engine.detect(state["data"])
@@ -85,9 +148,21 @@ class RiskAgent(BaseAgent):
         return state
 
 class RecommendAgent(BaseAgent):
+    """
+    Actionable recommendations generator agent.
+    """
     name = "RecommendAgent"
     role = "Convert engine outputs into ranked actionable recommendations"
     def run(self, state: dict) -> dict:
+        """
+        Translates multi-engine findings into prioritized actionable recommendations.
+
+        Args:
+            state (dict): Shared dictionary carrying prediction and risk score results.
+
+        Returns:
+            dict: State with populated 'recommendation_result'.
+        """
         try:
             pred_conf = state.get("prediction_result", {}).get("confidence", {}).get("score", 0.0)
             risk_score = state.get("risk_result", {}).get("risk_score", 0.0)
@@ -111,9 +186,21 @@ class RecommendAgent(BaseAgent):
         return state
 
 class DecisionAgent(BaseAgent):
+    """
+    Decision synthesising agent that resolves multi-engine predictions into an executive decree.
+    """
     name = "DecisionAgent"
     role = "Synthesise all results into a strategic decision"
     def run(self, state: dict) -> dict:
+        """
+        Executes decision synthesis across prediction, forecast, RCA, risk, and recommendations.
+
+        Args:
+            state (dict): Shared workflow dictionary state.
+
+        Returns:
+            dict: State with populated 'decision_result'.
+        """
         try:
             engine = DecisionEngine()
             res = engine.decide(
@@ -134,9 +221,21 @@ class DecisionAgent(BaseAgent):
         return state
 
 class EvalAgent(BaseAgent):
+    """
+    Global system evaluator agent checking overall reliability.
+    """
     name = "EvalAgent"
     role = "Compute overall confidence and flag weak engines"
     def run(self, state: dict) -> dict:
+        """
+        Scores overall pipeline confidence as a weighted average and determines bottleneck limits.
+
+        Args:
+            state (dict): Shared workflow dictionary state.
+
+        Returns:
+            dict: State with populated 'overall_confidence'.
+        """
         try:
             p_score = state.get("prediction_result", {}).get("confidence", {}).get("score", 0.0)
             f_score = state.get("forecast_result", {}).get("confidence", {}).get("score", 0.0) if state.get("forecast_result") else 0.0

@@ -36,18 +36,17 @@ def generate_plan(
     groq_api_key: Optional[str] = None,
 ) -> List[str]:
     """
-    Generate the preprocessing plan using the Groq LLM.
+    Generates a sequence of preprocessing steps using the Groq LLM or a fallback mechanism.
+
+    This function dynamically creates a data cleaning and preparation plan tailored to the dataset's characteristics.
 
     Args:
-        module1_output : Full output dict from Module 1
-        eda_report     : EDA report from tools/eda.py
-        groq_api_key   : Groq API key (falls back to GROQ_API_KEY env var)
+        module1_output (dict): The complete output dictionary produced by Module 1.
+        eda_report (dict): The Exploratory Data Analysis report containing quality metrics.
+        groq_api_key (Optional[str], optional): The API key for the Groq service. Defaults to None.
 
     Returns:
-        List of step name strings, e.g.:
-        ["handle_missing", "handle_outliers", "encoding", "scaling"]
-
-    Never raises — always returns a valid plan (LLM or fallback).
+        List[str]: A list of step names to execute (e.g., ["handle_missing", "encoding", "scaling"]).
     """
     # Build the filled prompt
     prompt = _build_prompt(module1_output, eda_report)
@@ -82,7 +81,14 @@ def generate_plan(
 
 def _build_prompt(module1_output: dict, eda_report: dict) -> str:
     """
-    Fill every {placeholder} in planning_prompt.txt with real data.
+    Constructs the prompt string to send to the LLM by substituting variables in the prompt template.
+    
+    Args:
+        module1_output (dict): Output from Module 1.
+        eda_report (dict): Output from EDA profiling.
+        
+    Returns:
+        str: The fully constructed prompt string.
     """
     # Load prompt template
     prompt_path = os.path.normpath(PROMPT_FILE)
@@ -195,8 +201,14 @@ def _build_prompt(module1_output: dict, eda_report: dict) -> str:
 
 def _call_groq(prompt: str, api_key: str) -> str:
     """
-    Call Groq API with the filled prompt.
-    Same pattern as Module 1's llm_client.py — compatible design.
+    Sends the planning prompt to the Groq LLM and retrieves the response.
+    
+    Args:
+        prompt (str): The prompt string.
+        api_key (str): The Groq API key.
+        
+    Returns:
+        str: The raw text response from the LLM.
     """
     from groq import Groq
 
@@ -233,14 +245,15 @@ def _call_groq(prompt: str, api_key: str) -> str:
 
 def _parse_plan(raw: str) -> List[str]:
     """
-    Parse the LLM response into a clean list of valid step names.
-
-    Handles:
-    - Clean JSON array: ["handle_missing", "encoding"]
-    - JSON wrapped in markdown: ```json [...] ```
-    - Extra whitespace / newlines
-    - Invalid step names (filtered out)
-    - Single quotes instead of double quotes
+    Parses the raw JSON response from the LLM into a Python list of valid pipeline step strings.
+    
+    Handles markdown artifacts and invalid JSON structures safely.
+    
+    Args:
+        raw (str): The raw string output from the LLM.
+        
+    Returns:
+        List[str]: A list of valid step names.
     """
     if not raw:
         return []
@@ -285,14 +298,16 @@ def _parse_plan(raw: str) -> List[str]:
 
 def _fallback_plan(module1_output: dict, eda_report: dict) -> List[str]:
     """
-    Build a conservative plan from the data directly — no LLM needed.
-
-    Called when:
-    - GROQ_API_KEY is not set
-    - LLM call fails (network error, rate limit, etc.)
-    - LLM returns unparseable or empty response
-
-    This ensures Module 2 always produces a valid result.
+    Generates a conservative preprocessing plan based on predefined rules.
+    
+    This acts as a reliable fallback when the LLM service is unavailable or returns unparseable outputs.
+    
+    Args:
+        module1_output (dict): Output from Module 1.
+        eda_report (dict): Output from EDA profiling.
+        
+    Returns:
+        List[str]: A rule-based list of valid step names.
     """
     plan  = []
     schema        = module1_output.get("data_schema", {})

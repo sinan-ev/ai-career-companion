@@ -11,14 +11,32 @@ from schemas.models import ConfidenceScore
 from ingestion.data_router import route_data
 
 class PredictionEngine:
+    """
+    AutoML model training, evaluation, and prediction engine.
+
+    Automatically detects target types (classification vs regression), filters features,
+    tests multiple candidate models (XGBoost, LightGBM, Random Forest, Linear/Ridge), calibrates
+    classifications, measures test metrics, and calculates prediction confidence.
+    """
     def __init__(self):
+        """
+        Initializes the PredictionEngine.
+        """
         self.model = None
         self.task_type = None
         self.feature_names = []
         self.calibrated = False
 
     def detect_task_type(self, y: pd.Series) -> str:
-        """Detect classification vs regression."""
+        """
+        Detects whether the target variable requires a classification or a regression task type.
+
+        Args:
+            y (pd.Series): The target variable column values.
+
+        Returns:
+            str: Task type, either "classification" or "regression".
+        """
         if y.dtype == 'object' or y.dtype == 'bool' or pd.api.types.is_categorical_dtype(y):
             return "classification"
         if y.nunique() <= 10 and (y.nunique() / len(y)) < 0.05:
@@ -26,6 +44,18 @@ class PredictionEngine:
         return "regression"
 
     def _compute_confidence(self, model, X_test, y_test, task_type) -> ConfidenceScore:
+        """
+        Calculates prediction reliability scores based on maximum probability or normalized regression error.
+
+        Args:
+            model (Estimator): The trained model.
+            X_test (DataFrame): Test feature set.
+            y_test (Series): Test ground-truth values.
+            task_type (str): Determined task type ("classification" or "regression").
+
+        Returns:
+            ConfidenceScore: Complete structural confidence details and suggestions.
+        """
         try:
             if task_type == "classification":
                 probas = model.predict_proba(X_test)
@@ -71,6 +101,18 @@ class PredictionEngine:
         )
 
     def train_and_predict(self, data: List[Dict[str, Any]], target_column: str = None) -> Dict[str, Any]:
+        """
+        Fits candidate models, tunes hyperparameters, calibrates classifiers, and reports test results.
+
+        Automatically performs priority target variable detection if target_column is not specified.
+
+        Args:
+            data (List[Dict[str, Any]]): List of raw records to process.
+            target_column (str, optional): The target target variable. Defaults to None.
+
+        Returns:
+            Dict[str, Any]: Model result dictionary describing tasks, scores, predictions list, summaries, and confidences.
+        """
         try:
             df = route_data(data)
             if df.empty:

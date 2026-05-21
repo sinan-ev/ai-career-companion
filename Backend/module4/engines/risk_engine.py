@@ -7,7 +7,26 @@ from schemas.models import ConfidenceScore
 from ingestion.data_router import route_data
 
 class RiskEngine:
+    """
+    Consolidated anomaly detection and data quality monitoring engine.
+
+    Employs an ensemble voting model consisting of three distinct detectors:
+    1. Isolation Forest (Model-based outlier identification)
+    2. Standard Deviation Z-Scores (Statistical feature extremity evaluation)
+    3. Tukey Fences IQR Outliers (Distribution-based range evaluation)
+    """
     def _compute_confidence(self, flags_a: np.ndarray, flags_b: np.ndarray, flags_c: np.ndarray) -> ConfidenceScore:
+        """
+        Computes detector agreement ratios to measure confidence levels in anomaly flags.
+
+        Args:
+            flags_a (np.ndarray): Boolean outlier flags from Detector A (Isolation Forest).
+            flags_b (np.ndarray): Boolean outlier flags from Detector B (Z-Score).
+            flags_c (np.ndarray): Boolean outlier flags from Detector C (IQR).
+
+        Returns:
+            ConfidenceScore: Calculated confidence scorecard.
+        """
         try:
             total_rows = len(flags_a)
             if total_rows == 0:
@@ -53,6 +72,17 @@ class RiskEngine:
         )
 
     def detect(self, data: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Scores input records for anomalies and formats corresponding operational alerts.
+
+        Executes the three-way voting ensemble and compiles overall risk percentage flags.
+
+        Args:
+            data (List[Dict[str, Any]]): List of raw records to process.
+
+        Returns:
+            Dict[str, Any]: Risk summary describing total records, anomaly rates, alert levels, and index arrays.
+        """
         try:
             df = route_data(data)
             df_num = df.select_dtypes(include=['number']).copy()

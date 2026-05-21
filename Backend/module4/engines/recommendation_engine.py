@@ -4,6 +4,9 @@ from utils.llm_client import LLMClient
 import json
 
 class RecommendationEngine:
+    """
+    Strategic recommendation engine designed to translate raw data anomalies and predictions into ranked strategic actions.
+    """
     RULES: List[Dict[str, Any]] = [
         {
             "id": 1, "condition_field": "risk_score", "condition_op": ">", "threshold": 70,
@@ -33,6 +36,17 @@ class RecommendationEngine:
     ]
 
     def _evaluate_condition(self, value, op, threshold) -> bool:
+        """
+        Helper method to evaluate simple comparative logical operations.
+
+        Args:
+            value (any): Variable value.
+            op (str): Operator string (">", "<", "==", "!=").
+            threshold (any): Comparison boundary.
+
+        Returns:
+            bool: Result of the evaluation.
+        """
         if op == ">": return value > threshold
         if op == "<": return value < threshold
         if op == "==": return value == threshold
@@ -40,6 +54,18 @@ class RecommendationEngine:
         return False
 
     def recommend(self, insights: List[str], prediction_confidence: float, risk_score: float, top_risk_features: List[str]) -> Dict[str, Any]:
+        """
+        Evaluates rule-based triggers and queries the strategic LLM model to compile actionable recommendations.
+
+        Args:
+            insights (List[str]): Extracted tabular insights.
+            prediction_confidence (float): Calculated metric for prediction reliability.
+            risk_score (float): Calculated anomalous risk score.
+            top_risk_features (List[str]): Key drivers identified during Root Cause Analysis.
+
+        Returns:
+            Dict[str, Any]: Result mapping prioritized recommendations list and confidence scores.
+        """
         try:
             anomaly_rate = risk_score / 100.0
             

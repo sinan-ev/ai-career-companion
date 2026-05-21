@@ -3,6 +3,20 @@ from functools import lru_cache
 
 
 class Settings(BaseSettings):
+    """
+    Application configuration settings loaded from environment variables.
+    
+    Attributes:
+        groq_api_key (str): API key for the Groq service.
+        app_name (str): The name of the application.
+        app_version (str): The version of the application.
+        debug (bool): Flag to enable or disable debug mode.
+        max_file_size_mb (int): Maximum allowed file size for upload in megabytes.
+        max_rows_before_sampling (int): Threshold of rows before sampling is triggered.
+        sample_size (int): Size of the sample to extract if threshold is exceeded.
+        groq_model (str): Name of the Groq model to use.
+        groq_max_tokens (int): Maximum tokens for Groq model generation.
+    """
     # Groq API (free)
     groq_api_key: str
 
@@ -27,4 +41,10 @@ class Settings(BaseSettings):
 
 @lru_cache()
 def get_settings() -> Settings:
+    """
+    Retrieve cached application settings.
+    
+    Returns:
+        Settings: The application settings instance.
+    """
     return Settings()

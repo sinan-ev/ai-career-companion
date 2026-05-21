@@ -27,7 +27,18 @@ def run_module2(
     save_artifacts_to: str = "artifacts",
 ) -> Module2Response:
     """
-    Run the complete Module 2 preprocessing pipeline.
+    Executes the complete Module 2 preprocessing pipeline, which includes validation, EDA, planning, 
+    transformation, and dataset artifact generation.
+
+    Args:
+        df (pd.DataFrame): The pandas DataFrame to process.
+        module1_output (dict): The dictionary output from Module 1 containing schema and metadata.
+        groq_api_key (Optional[str], optional): API key for the Groq service. Defaults to None.
+        save_artifacts_to (str, optional): Directory to save resulting ML artifacts (like encoders). Defaults to "artifacts".
+
+    Returns:
+        Module2Response: A fully structured Pydantic response containing EDA reports, processing steps, 
+                         dataset summaries, and file paths.
     """
 
     # STEP 1 --- VALIDATE INPUTS
@@ -182,7 +193,14 @@ def _print_summary(
     memory: Memory,
     dataset_result: dict,
 ) -> None:
-    """Print a clean run summary to the console."""
+    """
+    Prints a cleanly formatted execution summary of Module 2 to the console.
+    
+    Args:
+        response (Module2Response): The finalized response model.
+        memory (Memory): The execution memory that logged pipeline steps.
+        dataset_result (dict): The final outputs returned by dataset builder.
+    """
     sep = "=" * 50
     print(f"\n{sep}")
     print("  MODULE 2 — PIPELINE COMPLETE")

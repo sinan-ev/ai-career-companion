@@ -31,7 +31,25 @@ from schemas.models import ConfidenceScore
 from ingestion.data_router import route_data
 
 class ForecastingEngine:
+    """
+    Time-series forecasting engine utilizing an ensemble of Facebook Prophet and ARIMA.
+
+    Splits the historical dataset into training and validation folds, computes localized model ensembling
+    weights from validation MAEs, projects future intervals, and computes confidence levels.
+    """
     def _compute_confidence(self, prophet_mae: float, arima_mae: float, interval_widths: List[float], mean_forecast_value: float) -> ConfidenceScore:
+        """
+        Calculates a unified confidence scorecard for forecasted values based on validation error and width metrics.
+
+        Args:
+            prophet_mae (float): Validation mean absolute error from the Prophet model.
+            arima_mae (float): Validation mean absolute error from the ARIMA model.
+            interval_widths (List[float]): Estimated list of uncertainty boundary widths.
+            mean_forecast_value (float): The mean magnitude of forecasted numeric values.
+
+        Returns:
+            ConfidenceScore: Complete structural confidence details and suggestions.
+        """
         try:
             max_mae = max(prophet_mae, arima_mae)
             model_agreement = 1 - abs(prophet_mae - arima_mae) / (max_mae + 1e-9)
@@ -77,6 +95,21 @@ class ForecastingEngine:
         )
 
     def forecast(self, data: List[Dict[str, Any]], date_col: str, value_col: str, periods: int = 6) -> Dict[str, Any]:
+        """
+        Runs time-series forecasting over a sequence of tabular history records.
+
+        Parses datetime markers, detects historical step intervals, computes Prophet/ARIMA validation weights,
+        fits full ensembled models, and maps target predictions with confidence intervals.
+
+        Args:
+            data (List[Dict[str, Any]]): List of raw records to parse.
+            date_col (str): The column containing time indices or timestamps.
+            value_col (str): The column target to forecast.
+            periods (int, optional): Number of step increments into the future to forecast. Defaults to 6.
+
+        Returns:
+            Dict[str, Any]: Forecast summary containing model settings, future values, trend signals, and confidence scores.
+        """
         try:
             df = route_data(data)
             

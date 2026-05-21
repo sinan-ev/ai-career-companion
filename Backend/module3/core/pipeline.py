@@ -17,6 +17,25 @@ def run_module3(
     llm_provider: str = "openai",
     api_key: str = None,
 ) -> Module3Result:
+    """
+    Executes the Module 3 pipeline, integrating data context, RAG retrieval, analytics, and chart generation.
+
+    This acts as the main orchestrator for the analysis and insights generation phase. It uses the outputs 
+    from Modules 1 and 2 to build a retrieval-augmented generation (RAG) context, plans an analysis, 
+    generates statistical insights, creates visual charts, and processes an interactive chat query.
+
+    Args:
+        module1_output (dict): Output context dictionary from Module 1.
+        module2_output (dict): Preprocessed dataset context from Module 2.
+        df (pd.DataFrame): The machine learning-ready or analytical pandas DataFrame.
+        user_query (str, optional): An initial analytical query from the user. Defaults to "Give me a summary of this dataset".
+        llm_provider (str, optional): The LLM provider identifier. Defaults to "openai".
+        api_key (str, optional): The API key for the LLM provider. Defaults to None.
+
+    Returns:
+        Module3Result: A comprehensive Pydantic model containing charts, insights, explanations, 
+                       the analysis plan, calculated stats, a conversational answer, and a dataset summary.
+    """
     
     from module1.utils.llm_client import get_groq_client
     try:

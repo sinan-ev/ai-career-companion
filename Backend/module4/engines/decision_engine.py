@@ -2,7 +2,30 @@ from typing import Dict, Any, Optional
 from schemas.models import ConfidenceScore
 
 class DecisionEngine:
+    """
+    Central strategic synthesizer that converts outputs from multiple analytical engines
+    into unified business Situation-Finding-Decree summaries and 4-step actionable plans.
+    """
     def decide(self, prediction: Dict[str, Any], forecast: Optional[Dict[str, Any]], rca: Dict[str, Any], risk: Dict[str, Any], recommendation: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Synthesizes various metrics to establish strategic executive briefings.
+
+        Args:
+            prediction (Dict[str, Any]): Outputs from the PredictionEngine.
+            forecast (Optional[Dict[str, Any]]): Outputs from the ForecastingEngine.
+            rca (Dict[str, Any]): Outputs from the RCAAgent.
+            risk (Dict[str, Any]): Outputs from the RiskEngine.
+            recommendation (Dict[str, Any]): Outputs from the RecommendationEngine.
+
+        Returns:
+            Dict[str, Any]: Compiled decision intelligence dictionary including:
+                - situation (str): Current dataset/business status description.
+                - key_finding (str): Prime predictive metric summary.
+                - strategic_decision (str): Executive decree.
+                - action_plan (list[str]): Structured 4-step action schedule.
+                - executive_summary (str): Concise 1-sentence consolidated pitch.
+                - confidence (dict): ConfidenceScore tracking confidence constraints.
+        """
         try:
             # Extract key values
             anomaly_count = risk.get("anomaly_count", 0)

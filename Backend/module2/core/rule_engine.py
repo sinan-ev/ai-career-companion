@@ -54,23 +54,23 @@ def execute_plan(
     is_classification: bool = True,
 ) -> Tuple[pd.DataFrame, Dict[str, Any], List[Tuple[str, str, str]]]:
     """
-    Execute the agent's plan step by step.
+    Sequentially executes the steps in the provided preprocessing plan.
+    
+    Ensures that steps are run in a canonical order regardless of the plan's specific sequencing, 
+    and captures all generated artifacts and operation statuses.
 
-    Parameters
-    ----------
-    df               : validated input DataFrame
-    plan             : list of step names from the AI agent
-    module1_output   : full Module 1 output dict
-    memory           : PipelineMemory instance for logging
-    target_col       : target column — passed to every tool
-    outlier_strategy : "cap" or "remove" — passed to handle_outliers
-    is_classification: True for classification, False for regression
+    Args:
+        df (pd.DataFrame): The validated input DataFrame.
+        plan (List[str]): List of tool step names provided by the AI planner or fallback.
+        module1_output (Dict[str, Any]): Full context dictionary output from Module 1.
+        memory (PipelineMemory): The memory instance used for detailed logging.
+        target_col (str, optional): The identified target column, if any. Defaults to None.
+        outlier_strategy (str, optional): Strategy for outlier handling ("cap" or "remove"). Defaults to "cap".
+        is_classification (bool, optional): Indicates if the task is a classification task. Defaults to True.
 
-    Returns
-    -------
-    df_out           : transformed DataFrame
-    artifacts        : dict of saved encoders/scalers/feature info
-    steps_summary    : [(step_name, status, note), ...]
+    Returns:
+        Tuple[pd.DataFrame, Dict[str, Any], List[Tuple[str, str, str]]]: 
+            A tuple containing the transformed DataFrame, a dictionary of ML artifacts, and a list of step execution summaries.
     """
 
     # Normalise plan — lowercase, strip whitespace, drop unknowns
@@ -149,8 +149,19 @@ def _run_step(
     is_classification: bool,
 ) -> Tuple[pd.DataFrame, str]:
     """
-    Route a single step name to the correct tool.
-    Returns (transformed_df, note_string).
+    Routes a single planned step name to its corresponding data transformation tool.
+    
+    Args:
+        step (str): The specific step name (e.g., 'encoding').
+        df (pd.DataFrame): The current state of the dataset.
+        module1_output (Dict[str, Any]): Context dictionary from Module 1.
+        artifacts (Dict[str, Any]): Cumulative dictionary to store newly generated artifacts.
+        target_col (Optional[str]): The dataset's target column.
+        outlier_strategy (str): Chosen strategy to handle outliers.
+        is_classification (bool): Whether the machine learning task is classification.
+        
+    Returns:
+        Tuple[pd.DataFrame, str]: The newly transformed DataFrame and an operational summary note.
     """
 
     if step == "remove_duplicates":

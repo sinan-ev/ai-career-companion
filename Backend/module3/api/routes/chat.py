@@ -9,6 +9,21 @@ router = APIRouter()
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(req: ChatRequest):
+    """
+    Handles conversational interactions regarding a specific dataset.
+
+    It retrieves the dataset, dynamically compiles its summary context, sets up a temporary RAG database,
+    and runs the chat engine logic using the query, conversation history, and context.
+
+    Args:
+        req (ChatRequest): The incoming request carrying the dataset_id, query, and chat history.
+
+    Returns:
+        ChatResponse: The structured chatbot response including the answer text and source citations.
+
+    Raises:
+        HTTPException: If the requested dataset_id is not found in memory.
+    """
     dataset_id = req.dataset_id
     if dataset_id not in datasets:
         raise HTTPException(status_code=404, detail="Dataset not found")

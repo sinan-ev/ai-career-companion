@@ -18,8 +18,24 @@ def run_ai_agent(
     was_sampled: bool,
 ) -> tuple[str, list[str]]:
     """
-    Main AI reasoning step using Gemini free tier.
-    Returns (ai_summary, suggested_analyses).
+    Main AI reasoning step using the configured LLM.
+    
+    Constructs a prompt with dataset metadata and invokes the LLM to generate 
+    a contextual summary and suggest relevant analyses.
+    
+    Args:
+        domain (str): The identified domain of the dataset.
+        dataset_type (str): The specific type/category of the dataset.
+        schema (dict[str, list[str]]): A mapping of data types to lists of column names.
+        column_meanings (dict[str, str]): A mapping of columns to their plain-English meanings.
+        data_quality (dict): Profiling metrics including missing values and duplicates.
+        basic_stats (dict): Basic descriptive statistics for numerical columns.
+        row_count (int): The total number of rows.
+        col_count (int): The total number of columns.
+        was_sampled (bool): Whether the data was sampled down for analysis.
+        
+    Returns:
+        tuple[str, list[str]]: A tuple containing the AI-generated summary string and a list of suggested analyses strings.
     """
     prompt = _build_prompt(
         domain=domain,
@@ -42,6 +58,23 @@ def _build_prompt(
     domain, dataset_type, schema, column_meanings,
     data_quality, basic_stats, row_count, col_count, was_sampled,
 ) -> str:
+    """
+    Constructs the prompt string to send to the LLM.
+    
+    Args:
+        domain (str): The dataset domain.
+        dataset_type (str): The dataset type.
+        schema (dict): Dataset schema.
+        column_meanings (dict): Guessed meanings of columns.
+        data_quality (dict): Quality metrics.
+        basic_stats (dict): Numeric column stats.
+        row_count (int): Number of rows.
+        col_count (int): Number of columns.
+        was_sampled (bool): Whether dataset was sampled.
+        
+    Returns:
+        str: The fully constructed prompt for the LLM.
+    """
 
     columns_text = "\n".join(
         f"  - {col} ({_get_col_type(col, schema)}): {meaning}"
@@ -120,6 +153,16 @@ Return ONLY this JSON (no markdown, no extra text):
 
 
 def _get_col_type(col: str, schema: dict) -> str:
+    """
+    Helper function to determine the type of a column based on the schema.
+    
+    Args:
+        col (str): The column name.
+        schema (dict): The dataset schema.
+        
+    Returns:
+        str: The type of the column (e.g., 'numeric', 'categorical') or 'unknown'.
+    """
     for type_label, cols in schema.items():
         if col in cols:
             return type_label
@@ -127,6 +170,15 @@ def _get_col_type(col: str, schema: dict) -> str:
 
 
 def _parse_agent_response(raw: str) -> tuple[str, list[str]]:
+    """
+    Parses the raw JSON response from the LLM.
+    
+    Args:
+        raw (str): The raw string output from the LLM.
+        
+    Returns:
+        tuple[str, list[str]]: The parsed AI summary and a list of suggested analyses.
+    """
     try:
         raw = raw.replace("```json", "").replace("```", "").strip()
         result = json.loads(raw)

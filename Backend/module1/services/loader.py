@@ -9,8 +9,16 @@ settings = get_settings()
 
 async def load_dataset(file: UploadFile) -> tuple[pd.DataFrame, str]:
     """
-    Read an uploaded CSV or Excel file into a DataFrame.
-    Returns (dataframe, original_filename).
+    Reads an uploaded CSV or Excel file into a pandas DataFrame.
+    
+    Args:
+        file (UploadFile): The file object uploaded via FastAPI.
+        
+    Returns:
+        tuple[pd.DataFrame, str]: A tuple containing the loaded DataFrame and the original filename.
+        
+    Raises:
+        ValueError: If the file type is not supported.
     """
     content = await file.read() #Reads uploaded file as bytes
     suffix = Path(file.filename).suffix.lower()

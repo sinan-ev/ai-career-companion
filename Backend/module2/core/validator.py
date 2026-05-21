@@ -48,21 +48,14 @@ def validate_inputs(
     module1_output: dict
 ) -> Tuple[List[str], List[str]]:
     """
-    Validate both inputs before the pipeline starts.
+    Validates both the loaded DataFrame and the output from Module 1 before starting the Module 2 pipeline.
 
     Args:
-        df             : DataFrame loaded from the user's file
-        module1_output : Complete output dict from Module 1
+        df (pd.DataFrame): The DataFrame loaded from the user's dataset.
+        module1_output (dict): The complete output dictionary from Module 1.
 
     Returns:
-        (errors, warnings)
-        errors   → fatal issues — pipeline must stop
-        warnings → non-fatal issues — pipeline continues, user is informed
-
-    Usage:
-        errors, warnings = validate_inputs(df, module1_output)
-        if errors:
-            raise ValidationError(errors[0])
+        Tuple[List[str], List[str]]: A tuple containing a list of fatal errors and a list of non-fatal warnings.
     """
     errors = []
     warnings = []
@@ -311,12 +304,17 @@ def _cross_validate(
 
 def validate_or_raise(df: pd.DataFrame, module1_output: dict) -> List[str]:
     """
-    Convenience wrapper — raises ValidationError on any fatal error.
-    Returns warnings list so the pipeline can pass them to Module2Response.
+    Convenience wrapper that runs input validation and raises a ValidationError if any fatal issues are found.
 
-    Usage (simplest form in pipeline_module2.py):
-        warnings = validate_or_raise(df, module1_output)
-        # if we reach here, inputs are safe to process
+    Args:
+        df (pd.DataFrame): The DataFrame loaded from the user's dataset.
+        module1_output (dict): The output dictionary from Module 1.
+
+    Returns:
+        List[str]: A list of generated non-fatal warnings during validation.
+        
+    Raises:
+        ValidationError: If the dataset or Module 1 output has structural anomalies preventing processing.
     """
     errors, warnings = validate_inputs(df, module1_output)
     if errors:
