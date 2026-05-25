@@ -10,7 +10,9 @@ import {
   LineChart, Line, AreaChart, Area, Legend, ReferenceLine
 } from 'recharts';
 
-const API_URL = "http://127.0.0.1:8000/api/4/run-pipeline";
+import { BACKEND_URL } from '../apiConfig';
+
+const API_URL = `${BACKEND_URL}/api/4/run-pipeline`;
 
 const DecisionIntelligenceView = ({ data, targetColumn, featureColumns, activeView }) => {
   const [loading, setLoading] = useState(false);
@@ -42,7 +44,7 @@ const DecisionIntelligenceView = ({ data, targetColumn, featureColumns, activeVi
     setIsTyping(true);
     
     try {
-      const response = await axios.post("http://127.0.0.1:8000/api/4/chat", {
+      const response = await axios.post(`${BACKEND_URL}/api/4/chat`, {
         message: message,
         context: result || {}
       });

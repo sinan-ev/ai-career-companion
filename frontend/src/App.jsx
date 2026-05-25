@@ -5,7 +5,9 @@ import UploadZone from './components/UploadZone';
 import Dashboard from './components/Dashboard';
 import { Loader2, Database, Brain, Sparkles, ShieldCheck, Layers, Target, TrendingUp } from 'lucide-react';
 
-const API_URL = "http://127.0.0.1:8000/api/process";
+import { API_URL as BASE_API_URL } from './apiConfig';
+
+const API_URL = `${BASE_API_URL}/process`;
 
 const pipelinePhases = [
   { icon: Brain, label: 'Understanding your data...', detail: 'AI analyzing schema, domains, and column meanings' },

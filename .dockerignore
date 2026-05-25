@@ -1,0 +1,32 @@
+# Python ignore
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.pytest_cache
+**/.ruff_cache
+**/.venv
+**/venv
+**/env
+
+# Node ignore
+**/node_modules
+**/dist
+**/.eslintcache
+
+# Project artifacts & storage
+**/artifacts/*
+**/exports/*
+**/mlflow_data/*
+**/.git
+**/.gitignore
+
+# Environment secrets
+**/.env
+**/.env.prod
+**/.env.local
+
+# Documentation and temp files
+**/*.pdf
+**/*.docx
+**/*.md

@@ -58,7 +58,7 @@ def run_module3(
         insights, confidence = generate_insights(stats, rag_result, context, llm_client)
         explanation = explain(insights, stats, context, llm_client)
     except Exception as e:
-        print(f"--- INSIGHT/EXPLANATION ERROR ---")
+        print("--- INSIGHT/EXPLANATION ERROR ---")
         print(f"Error: {e}")
         insights = ["Data appears consistent.", "Key patterns observed in top categories."]
         confidence = 0.5

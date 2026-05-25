@@ -1,11 +1,11 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 
 
 class Settings(BaseSettings):
     """
     Application configuration settings loaded from environment variables.
-    
+
     Attributes:
         groq_api_key (str): API key for the Groq service.
         app_name (str): The name of the application.
@@ -16,7 +16,18 @@ class Settings(BaseSettings):
         sample_size (int): Size of the sample to extract if threshold is exceeded.
         groq_model (str): Name of the Groq model to use.
         groq_max_tokens (int): Maximum tokens for Groq model generation.
+        storage_backend (str): Storage backend to use ('local' or 'gcs').
+        gcs_bucket_name (str): GCS bucket name for artifact storage (required when storage_backend='gcs').
     """
+
+    # pydantic-settings v2 config — extra="ignore" silences GCP-injected
+    # env vars like PORT, K_SERVICE, etc. that are not declared fields.
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
     # Groq API (free)
     groq_api_key: str
 
@@ -34,9 +45,9 @@ class Settings(BaseSettings):
     groq_model: str = "llama-3.1-8b-instant"
     groq_max_tokens: int = 2048
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    # Storage config (set via env vars on Cloud Run)
+    storage_backend: str = "local"
+    gcs_bucket_name: str = ""
 
 
 @lru_cache()

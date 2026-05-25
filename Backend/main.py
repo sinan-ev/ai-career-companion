@@ -14,7 +14,7 @@ warnings.filterwarnings("ignore", module="shap")
 warnings.filterwarnings("ignore", module="lightgbm")
 
 # Ensure module4 is in the Python path
-sys.path.append(os.path.join(os.path.dirname(__file__), "module4"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "module4"))
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -54,7 +54,21 @@ ARTIFCAT_DIR.mkdir(exist_ok=True)
 
 # Mount exports directory to serve files
 # Users can download files from /downloads/filename.csv
-app.mount("/downloads", StaticFiles(directory=str(EXPORTS_DIR)), name="downloads")
+
+from utils.gcs_storage import generate_signed_url, STORAGE_BACKEND
+from fastapi.responses import FileResponse, RedirectResponse
+
+@app.get("/downloads/{filename}")
+async def download_file(filename: str):
+    """Serve exported files from GCS (prod) or local disk (dev)."""
+    path = f"exports/{filename}"
+    if STORAGE_BACKEND == "gcs":
+        url = generate_signed_url(path, expires_minutes=60)
+        return RedirectResponse(url)
+    local_path = EXPORTS_DIR / filename
+    if not local_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(str(local_path))
 
 from module1.models.response_model import AnalysisResponse
 from module2.models.module2_response import Module2Response
@@ -92,6 +106,13 @@ async def process_dataset(
     Raises:
         HTTPException: If the file is not provided, unsupported, empty, or if processing fails.
     """
+    # Automatically clean up older local files before starting the new run
+    from utils.gcs_storage import cleanup_old_local_files
+    try:
+        cleanup_old_local_files(max_age_minutes=60)
+    except Exception as e:
+        print(f"[Cleanup Error] Failed to clear old local files: {e}")
+
     if not file.filename:
         raise HTTPException(status_code=400, detail="No file provided")
 

@@ -311,7 +311,7 @@ def _apply_suggested_hints(
                 base_log = f"{col}_log"
                 if base_log not in df.columns and _is_skewed(df[col], threshold=0.5):
                     df[base_log] = np.log1p(df[col])
-                    results.append((base_log, f"log transform suggested by Module 1 analysis"))
+                    results.append((base_log, "log transform suggested by Module 1 analysis"))
                     break  # one is enough to honour the hint
 
     # If Module 1 suggested interaction or cross features
@@ -322,6 +322,6 @@ def _apply_suggested_hints(
             new_col = f"{c1}_times_{c2}"
             if new_col not in df.columns:
                 df[new_col] = df[c1] * df[c2]
-                results.append((new_col, f"multiplicative interaction suggested by Module 1"))
+                results.append((new_col, "multiplicative interaction suggested by Module 1"))
 
     return results

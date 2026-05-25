@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  backend:
+    image: ghcr.io/sinan-ev/ai-career-companion/backend:latest
+    container_name: ai_career_backend_prod
+    restart: always
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./Backend/.env
+    volumes:
+      - backend_artifacts_prod:/app/artifacts
+      - backend_exports_prod:/app/exports
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    container_name: mlflow_server_prod
+    restart: always
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_data_prod:/mlflow
+    command: >
+      mlflow server
+        --host 0.0.0.0
+        --port 5000
+        --backend-store-uri /mlflow/tracking
+        --default-artifact-root /mlflow/artifacts
+
+volumes:
+  backend_artifacts_prod:
+  backend_exports_prod:
+  mlflow_data_prod:

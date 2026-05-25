@@ -1,0 +1,61 @@
+name: CD Pipeline - Deploy Backend to GCP Cloud Run
+
+on:
+  push:
+    branches: [main]
+
+env:
+  # GCP Configuration (You can override these or keep as defaults)
+  GCP_REGION: us-central1
+  GCP_REPO_NAME: ai-career-repo
+  BACKEND_SERVICE_NAME: ai-career-backend
+
+jobs:
+  # ── Deploy Backend to GCP Cloud Run ─────────────────────────────
+  deploy-backend:
+    name: Build & Deploy Backend
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 1. Authenticate with Google Cloud using Service Account Key
+      - name: Authenticate with GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      # 2. Setup Google Cloud CLI
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # 3. Configure Docker to authenticate with Google Artifact Registry (GAR)
+      - name: Configure Docker for GAR
+        run: |
+          gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      # 4. Build the Backend Docker Image
+      - name: Build Backend Image
+        run: |
+          docker build ./Backend \
+            -t ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.GCP_REPO_NAME }}/backend:${{ github.sha }} \
+            -t ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.GCP_REPO_NAME }}/backend:latest
+
+      # 5. Push the Image to Google Artifact Registry
+      - name: Push Backend Image
+        run: |
+          docker push --all-tags ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.GCP_REPO_NAME }}/backend
+
+      # 6. Deploy the Image to Google Cloud Run
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.BACKEND_SERVICE_NAME }} \
+            --image ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.GCP_REPO_NAME }}/backend:${{ github.sha }} \
+            --region ${{ env.GCP_REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --memory 2Gi \
+            --cpu 2 \
+            --timeout 300 \
+            --set-env-vars="STORAGE_BACKEND=gcs,GCS_BUCKET_NAME=${{ secrets.GCS_BUCKET_NAME }},GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}"

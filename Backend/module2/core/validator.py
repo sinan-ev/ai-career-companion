@@ -319,7 +319,7 @@ def validate_or_raise(df: pd.DataFrame, module1_output: dict) -> List[str]:
     errors, warnings = validate_inputs(df, module1_output)
     if errors:
         raise ValidationError(
-            f"Module 2 validation failed:\n" +
+            "Module 2 validation failed:\n" +
             "\n".join(f"  - {e}" for e in errors)
         )
     return warnings

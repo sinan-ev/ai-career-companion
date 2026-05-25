@@ -300,7 +300,7 @@ def critic_agent(df: pd.DataFrame, pad: AgentScratchpad) -> bool:
             cdef["type"] = "bar"
             cdef["y_col"] = "COUNT"
             cdef["agg"]   = "count"
-            issues.append(f"  → Auto-repaired to bar/COUNT.")
+            issues.append("  → Auto-repaired to bar/COUNT.")
 
         valid_charts.append(cdef)
 

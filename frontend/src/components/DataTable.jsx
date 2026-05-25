@@ -8,13 +8,7 @@ const DataTable = ({ data, columnTypes = {} }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const rowsPerPage = 10;
 
-  if (!data || data.length === 0) return (
-    <div className="empty-table glass-card">
-      <p>No preview data available.</p>
-    </div>
-  );
-
-  const headers = Object.keys(data[0]);
+  const headers = data && data.length > 0 ? Object.keys(data[0]) : [];
 
   const getTypeIcon = (header) => {
     const type = columnTypes[header];
@@ -32,6 +26,7 @@ const DataTable = ({ data, columnTypes = {} }) => {
   };
 
   const filteredData = useMemo(() => {
+    if (!data || data.length === 0) return [];
     if (!searchTerm) return data;
     return data.filter(row =>
       headers.some(h =>
@@ -55,6 +50,12 @@ const DataTable = ({ data, columnTypes = {} }) => {
         : String(bVal).localeCompare(String(aVal));
     });
   }, [filteredData, sortConfig]);
+
+  if (!data || data.length === 0) return (
+    <div className="empty-table glass-card">
+      <p>No preview data available.</p>
+    </div>
+  );
 
   const totalPages = Math.ceil(sortedData.length / rowsPerPage);
   const paginatedData = sortedData.slice(

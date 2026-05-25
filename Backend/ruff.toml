@@ -1,0 +1,28 @@
+# Ruff configuration for FastAPI Backend
+
+# Target python version
+target-version = "py312"
+
+# Line length limit
+line-length = 120
+
+[lint]
+# Enable standard Pyflakes (F) and pycodestyle (E, W) rules, along with import sorting (I)
+select = ["E", "F", "W", "I"]
+
+# Ignore minor styling and legacy rules to allow existing codebase to build cleanly
+ignore = [
+    "F401",  # Unused imports
+    "F841",  # Local variable assigned but unused
+    "E402",  # Module level import not at top of file
+    "E701",  # Multiple statements on one line (colon)
+    "E501",  # Line too long
+    "W291",  # Trailing whitespace
+    "W293",  # Blank line contains whitespace
+    "I001",  # Unsorted imports
+    "F403",  # Star imports used
+    "F405",  # Undefined/defined from star imports
+    "E741",  # Ambiguous variable name
+    "E721",  # Type comparison instead of isinstance
+    "E722",  # Do not use bare except
+]

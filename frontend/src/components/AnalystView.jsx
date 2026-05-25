@@ -17,7 +17,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 
-const BACKEND_URL = 'http://127.0.0.1:8000/api';
+import { API_URL as BACKEND_URL } from '../apiConfig';
 
 const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
 

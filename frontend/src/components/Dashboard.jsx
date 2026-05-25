@@ -37,15 +37,13 @@ import DataTable from './DataTable';
 import PipelineView from './PipelineView';
 import ColumnExplorer from './ColumnExplorer';
 
-const BACKEND_URL = 'http://127.0.0.1:8000';
+import { BACKEND_URL } from '../apiConfig';
 
 const Dashboard = ({ data, onReset }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [analystLoaded, setAnalystLoaded] = useState(false);
   const [diLoaded, setDiLoaded] = useState(false);
 
-  if (!data) return null;
-  
   // Lazy load AnalystView and DecisionIntelligenceView
   React.useEffect(() => {
     if (activeTab === 'analyst') {
@@ -55,6 +53,8 @@ const Dashboard = ({ data, onReset }) => {
       setDiLoaded(true);
     }
   }, [activeTab]);
+
+  if (!data) return null;
 
   const { module1, module2 } = data;
   const eda = module2.eda_report;

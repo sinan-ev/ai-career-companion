@@ -4,6 +4,8 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional
 
+from utils.gcs_storage import save_csv
+
 from module2.core.validator import validate_or_raise, ValidationError
 from module2.core.memory import Memory
 from module2.core.agent_planner import generate_plan
@@ -134,22 +136,20 @@ def run_module2(
     # STEP 7.5 — EXPORT DATASETS TO CSV
     # ══════════════════════════════════════════
     # Save the processed dataframes to disk if export_dir is provided
-    export_dir = Path("exports")
-    export_dir.mkdir(exist_ok=True)
     
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     base_name = module1_output.get("dataset_info", {}).get("file_name", "dataset")
     base_name = Path(base_name).stem
     
-    analytics_path = export_dir / f"{base_name}_{timestamp}_analytics.csv"
-    ml_path        = export_dir / f"{base_name}_{timestamp}_ml.csv"
+    analytics_filename = f"{base_name}_{timestamp}_analytics.csv"
+    ml_filename        = f"{base_name}_{timestamp}_ml.csv"
     
-    dataset_result["analytics_dataset"].to_csv(analytics_path, index=False)
-    dataset_result["ml_dataset"].to_csv(ml_path, index=False)
+    save_csv(dataset_result["analytics_dataset"], f"exports/{analytics_filename}")
+    save_csv(dataset_result["ml_dataset"], f"exports/{ml_filename}")
     
     dataset_outputs_model.dataset_files = {
-        "analytics": analytics_path.name,
-        "ml": ml_path.name
+        "analytics": analytics_filename,
+        "ml": ml_filename
     }
 
     # Extract sample data for UI preview (first 10 rows)

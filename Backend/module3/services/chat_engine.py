@@ -126,7 +126,7 @@ def chat(
             return f"{answer}\n\n*(Confidence Score: {confidence * 100:.1f}%)*"
             
         except Exception as e:
-            print(f"--- CHAT ENGINE ERROR ---")
+            print("--- CHAT ENGINE ERROR ---")
             print(f"Error Message: {str(e)}")
             
             # 10. HEURISTIC FALLBACK (Safety Net)

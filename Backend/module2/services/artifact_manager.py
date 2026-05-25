@@ -58,6 +58,8 @@ import joblib
 from datetime import datetime
 from typing import Dict, Any, List
 
+from utils.gcs_storage import save_pickle, save_json, load_pickle, load_json
+
 DEFAULT_ARTIFACTS_DIR = "artifacts"
 
 
@@ -101,22 +103,20 @@ def save_artifacts(
     # ── Save encoders ──
     # Strip non-serialisable scaler objects from encoder_map before saving
     # (encoder_map is already serialisable — mappings are plain dicts)
-    joblib.dump(encoder_map, paths["encoders"])
+    save_pickle(encoder_map, paths["encoders"])
 
     # ── Save scalers ──
     # scaler_map contains fitted sklearn objects — joblib handles these
-    joblib.dump(scaler_map, paths["scalers"])
+    save_pickle(scaler_map, paths["scalers"])
 
     # ── Save feature list ──
-    with open(paths["features"], "w", encoding="utf-8") as f:
-        json.dump({"feature_columns": feature_cols}, f, indent=2)
+    save_json({"feature_columns": feature_cols}, paths["features"])
 
     # ── Save metadata ──
     metadata = _build_metadata(
         encoder_map, scaler_map, feature_cols, module1_output, artifact_dir, timestamp
     )
-    with open(paths["metadata"], "w", encoding="utf-8") as f:
-        json.dump(metadata, f, indent=2, default=str)
+    save_json(metadata, paths["metadata"])
 
     return paths
 
@@ -139,26 +139,33 @@ def load_artifacts(artifact_dir: str) -> Dict[str, Any]:
     features_path = os.path.join(artifact_dir, "feature_list.json")
     metadata_path = os.path.join(artifact_dir, "metadata.json")
 
-    if not os.path.exists(artifact_dir):
+    from utils.gcs_storage import STORAGE_BACKEND
+    if STORAGE_BACKEND != "gcs" and not os.path.exists(artifact_dir):
         raise FileNotFoundError(
             f"Artifact directory not found: {artifact_dir}"
         )
 
     result = {}
 
-    if os.path.exists(encoders_path):
-        result["encoder_map"] = joblib.load(encoders_path)
+    try:
+        result["encoder_map"] = load_pickle(encoders_path)
+    except Exception:
+        pass
 
-    if os.path.exists(scalers_path):
-        result["scaler_map"] = joblib.load(scalers_path)
+    try:
+        result["scaler_map"] = load_pickle(scalers_path)
+    except Exception:
+        pass
 
-    if os.path.exists(features_path):
-        with open(features_path, "r", encoding="utf-8") as f:
-            result["feature_columns"] = json.load(f)["feature_columns"]
+    try:
+        result["feature_columns"] = load_json(features_path)["feature_columns"]
+    except Exception:
+        pass
 
-    if os.path.exists(metadata_path):
-        with open(metadata_path, "r", encoding="utf-8") as f:
-            result["metadata"] = json.load(f)
+    try:
+        result["metadata"] = load_json(metadata_path)
+    except Exception:
+        pass
 
     return result
 

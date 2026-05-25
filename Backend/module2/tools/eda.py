@@ -342,7 +342,7 @@ def _build_agent_summary(
             if ti.get("is_imbalanced"):
                 lines.append("  ⚠ IMBALANCED — consider class weights or resampling")
         else:
-            lines.append(f"  Task type: REGRESSION")
+            lines.append("  Task type: REGRESSION")
             lines.append(f"  Range: [{ti.get('min')} – {ti.get('max')}] | Mean: {ti.get('mean')}")
     lines.append("")
 

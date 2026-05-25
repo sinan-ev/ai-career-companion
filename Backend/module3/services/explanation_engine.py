@@ -39,7 +39,7 @@ def explain(
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
-        print(f"--- EXPLANATION GENERATION ERROR ---")
+        print("--- EXPLANATION GENERATION ERROR ---")
         print(f"Error Message: {str(e)}")
         
         # Robust fallback

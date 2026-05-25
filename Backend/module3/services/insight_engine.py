@@ -68,7 +68,7 @@ def generate_insights(
 
     except Exception as e:
         import traceback
-        print(f"--- INSIGHT GENERATION ERROR ---")
+        print("--- INSIGHT GENERATION ERROR ---")
         print(f"Error Type: {type(e).__name__}")
         print(f"Error Message: {str(e)}")
         # print(traceback.format_exc())
