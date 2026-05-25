@@ -1,51 +1,142 @@
 # End-to-End AI Decision Intelligence Platform
 
-A professional‑grade, AI‑powered platform that transforms raw datasets into actionable present-state analytics, human-readable insights, ML‑ready datasets, and future-focused strategic AI decisions.
+A professional‑grade, multi-agent AI‑powered platform that transforms raw datasets into human-understandable business contexts, cleans and prepares data for machine learning, constructs conversational RAG insights, performs AutoML predictions and forecasting, and compiles executive-level decision reports.
 
-## 🚀 New Features (v3.0.0)
+---
 
-- **Module 1 (Data Understanding)** – Automatically understands dataset structure, business context, column types, and target information.
-- **Module 2 (Intelligent Processing)** – Separates data into human-readable format for visualization and an ML-ready encoded dataset.
-- **Module 3A (Present-State Analytics)** – Generates visualizations, KPI insights, trends, and RAG-backed chatbot interactions using human-readable data.
-- **Module 3B (Future Intelligence)** – End-to-end predictive pipeline that:
-  - Runs AutoML for predictions and forecasting to generate future datasets.
-  - Converts technical ML outputs into business-understandable future insights (explaining why changes happen, business factors).
-  - Performs AI-driven Root Cause Analysis (RCA) and generates strategic actionable solutions via LLM reasoning.
-  - Integrates a **Future-Focused Chat Assistant** to interact with prediction outputs and recommended strategies in natural language.
+## 🧠 The 4-Module Intelligence Pipeline
+
+The platform is designed around four decoupled, cooperating AI modules:
+
+### 1. Module 1: Data Understanding & Profiling
+*   **Purpose**: Translate machine-level columns into rich human business contexts.
+*   **Capabilities**:
+    *   **Normalization**: Detects and standardizes disguised null values (e.g., `"N/A"`, `"-999"`, `"??"`).
+    *   **Type Parsing**: Dynamically detects column schemas (numeric, categorical, datetime, IDs).
+    *   **Semantic Labeling**: Uses LLM reasoning to explain cryptic column names (e.g., `cnt_v1` → "customer monthly count version 1").
+    *   **Domain & Summary**: Summarizes the business domain (e.g., HR, Sales, Healthcare) and writes a narrative overview.
+
+### 2. Module 2: Intelligent Preprocessing & Pre-ML
+*   **Purpose**: Dynamically prepare, clean, and format datasets for visualization and ML modeling.
+*   **Capabilities**:
+    *   **AI Planning**: Analyzes data issues (skew, outliers, missingness) to formulate a tailored cleaning sequence.
+    *   **Dynamic Execution**: Runs cleaning steps (imputation, Tukey outlier capping, scaling, categorical encoding) in strict, non-leakage canonical order.
+    *   **Dual Exports**: Splits data into an `analytics` version (human-readable string labels) and an `ml` version (fully encoded/scaled numeric vectors).
+    *   **Smart Target Detection**: Predicts the dependent target variable ($Y$) by analyzing semantic context and training suggestions.
+
+### 3. Module 3: Present-State Analytics & RAG Chat
+*   **Purpose**: Generate interactive dashboards, statistical insights, and a conversation-grounded data assistant.
+*   **Capabilities**:
+    *   **Multi-Agent Charting**: Uses a Scout-Planner-Critic-Builder agent loop to generate 5-6 Plotly-compatible interactive charts.
+    *   **Parallel Insights**: Concurrently generates key findings to prevent UI load lag.
+    *   **Contextual RAG Store**: Embeds dataset schema, summary, and domain context into an in-memory vector store.
+    *   **Guardrailed Chat**: Implements a strict, jargon-free business chat assistant that queries the RAG store and runs on-the-fly pandas aggregations.
+
+### 4. Module 4: Future Intelligence & Strategic Recommendations
+*   **Purpose**: Run AutoML predictions, forecasting, root-cause analysis (RCA), and anomaly monitoring.
+*   **Capabilities**:
+    *   **LangGraph Coordination**: Connects 7 specialized agents (`Prediction`, `Forecast`, `RCA`, `Risk`, `Recommend`, `Decision`, `Eval`) in a sequential workflow graph.
+    *   **AutoML & Ensemble Forecasting**: Benchmarks multiple models (LGBM, XGBoost, CatBoost, RandomForest) for classification/regression, and runs an inverse-error Prophet-ARIMA ensemble for time series.
+    *   **Statistical RCA**: Explains model behavior by calculating SHAP values over multiple data folds, converting statistical importances into executive business explanations.
+    *   **Decision Synthesis**: Merges prediction, risk, forecasting, and recommendations into a unified business decree with a limiting-factor confidence score.
+
+---
 
 ## 🛠 Tech Stack
 
-### Backend (Python/FastAPI)
-- **Framework**: FastAPI
-- **LLM**: Groq (`llama‑3.1‑8b‑instant`)
-- **Processing**: pandas, NumPy, scikit‑learn
-- **Validation**: Pydantic v2
+### Backend (Python)
+*   **Framework**: FastAPI
+*   **AI Orchestration**: LangGraph, LangChain Core
+*   **LLM API**: Groq Cloud SDK (`llama-3.1-8b-instant`)
+*   **ML & Analytics**: pandas, NumPy, scikit-learn, LightGBM, XGBoost, CatBoost, shap, lime, prophet, pmdarima
+*   **Cloud Storage**: Google Cloud Storage (`google-cloud-storage`)
+*   **Validation**: Pydantic v2 & Pydantic Settings
+*   **Testing & Linting**: pytest, httpx, Ruff
 
 ### Frontend (React/Vite)
-- **Framework**: React 18+ with Vite
-- **Visualization**: Recharts (bar, line, histogram, horizontal bar)
-- **Styling**: Vanilla CSS with glass‑morphism, vibrant palettes, micro‑animations
+*   **Build System**: Vite + React 18
+*   **Styling**: Vanilla CSS (Custom modern variables, glassmorphism, micro-animations, sleek dark mode)
+*   **Visualization**: Recharts, Plotly.js
+*   **API Interaction**: Axios
+
+---
 
 ## 📂 Project Structure
 
 ```text
+ai-career-companion/
+├── .github/
+│   └── workflows/
+│       ├── ci.yml                 # Runs Ruff, Pytest, ESLint, Vite Build, Docker verify
+│       └── cd.yml                 # Builds Docker images and deploys backend to GCP Cloud Run
 ├── Backend/
-│   ├── main.py                # Unified API entry point
-│   ├── module1/               # Data understanding (schema, column meanings)
-│   ├── module2/               # Advanced EDA, preprocessing, and dataset splitting
-│   ├── module3a/              # Present-state analytics (charts, insights, RAG chatbot)
-│   ├── module_3b/             # Future intelligence (AutoML, RCA, strategy engine, business chat)
-│   └── exports/               # Generated CSVs & artifacts
+│   ├── main.py                    # Unified FastAPI entry point (combines all modules)
+│   ├── Dockerfile                 # Multi-stage production build (builder + non-root runtime)
+│   ├── ruff.toml                  # Ruff lint configurations
+│   ├── requirements.txt           # Main python dependencies
+│   ├── module1/                   # Module 1: Data Understanding
+│   ├── module2/                   # Module 2: Intelligent Preprocessing
+│   ├── module3/                   # Module 3: Present-State Analytics & RAG Chat
+│   ├── module4/                   # Module 4: Future Intelligence (LangGraph)
+│   ├── utils/
+│   │   ├── gcs_storage.py         # GCS & local storage abstraction layer
+│   │   └── llm_client.py          # Cached Groq and general LLM client wrappers
+│   └── tests/
+│       └── test_main.py           # Pytest unit tests for endpoint health and validations
 ├── frontend/
-│   ├── src/components/        # UploadZone, AnalystView, PipelineView, etc.
-│   └── src/App.jsx            # Front‑end orchestrator
-└── README.md
+│   ├── src/                       # React frontend source code
+│   │   ├── components/            # UploadZone, PipelineView, AnalystView, ChatBot
+│   │   └── App.jsx                # Frontend application orchestrator
+│   ├── Dockerfile                 # Multi-stage Node build with Nginx runtime
+│   ├── nginx.conf                 # Nginx proxy and SPA routing setup
+│   ├── vercel.json                # Vercel SPA routing rules
+│   └── package.json               # Frontend dependencies and scripts
+├── docker-compose.yml             # Local multi-container stack (dev environment + MLflow)
+├── docker-compose.prod.yml        # Production-grade multi-container stack (registry images)
+├── ARCHITECTURE.md                # Comprehensive data flow and agent blueprints
+├── API_REFERENCE.md               # Typed schemas and HTTP endpoint details
+└── README.md                      # This root overview
 ```
 
-## 📖 Documentation
-- **API Reference** – Updated `/api/analyze` endpoint returns a `Module3AResult` with charts, insights, and pipeline plan.
-- **Architecture** – Diagram now includes the RAG store, chart engine, and chatbot modules.
-- **User Guide** – Upload a CSV/Excel file, click **Launch Pipeline**, and explore the auto‑generated dashboard.
+---
+
+## 🚀 Running the Platform
+
+### Option A: Local Docker Stack (Recommended)
+Spins up the React frontend, FastAPI backend, and an MLflow server tracking UI with volume mounts and hot-reloading:
+```bash
+docker compose up --build
+```
+*   **Frontend UI**: `http://localhost:5173`
+*   **Backend Swagger Docs**: `http://localhost:8000/docs`
+*   **MLflow Server**: `http://localhost:5000`
+
+### Option B: Manual Setup
+
+#### 1. Backend Setup
+1.  Navigate to `/Backend` and create a `.env` file containing your `GROQ_API_KEY`.
+2.  Install dependencies:
+    ```bash
+    cd Backend
+    pip install -r requirements.txt
+    ```
+3.  Start server:
+    ```bash
+    uvicorn main:app --reload --port 8000
+    ```
+
+#### 2. Frontend Setup
+1.  Navigate to `/frontend`.
+2.  Install packages:
+    ```bash
+    cd frontend
+    npm install
+    ```
+3.  Start Vite development server:
+    ```bash
+    npm run dev
+    ```
 
 ---
-*Created by the Data Intelligence Team*
+
+*Developed by the Data Intelligence Team*
