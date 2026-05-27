@@ -91,8 +91,6 @@ ai-career-companion/
 │   ├── nginx.conf                 # Nginx proxy and SPA routing setup
 │   ├── vercel.json                # Vercel SPA routing rules
 │   └── package.json               # Frontend dependencies and scripts
-├── docker-compose.yml             # Local multi-container stack (dev environment + MLflow)
-├── docker-compose.prod.yml        # Production-grade multi-container stack (registry images)
 ├── ARCHITECTURE.md                # Comprehensive data flow and agent blueprints
 ├── API_REFERENCE.md               # Typed schemas and HTTP endpoint details
 └── README.md                      # This root overview
@@ -102,16 +100,7 @@ ai-career-companion/
 
 ## 🚀 Running the Platform
 
-### Option A: Local Docker Stack (Recommended)
-Spins up the React frontend, FastAPI backend, and an MLflow server tracking UI with volume mounts and hot-reloading:
-```bash
-docker compose up --build
-```
-*   **Frontend UI**: `http://localhost:5173`
-*   **Backend Swagger Docs**: `http://localhost:8000/docs`
-*   **MLflow Server**: `http://localhost:5000`
-
-### Option B: Manual Setup
+### Setup & Run Instructions
 
 #### 1. Backend Setup
 1.  Navigate to `/Backend` and create a `.env` file containing your `GROQ_API_KEY`.

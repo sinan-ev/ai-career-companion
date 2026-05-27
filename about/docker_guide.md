@@ -32,34 +32,7 @@ The following files have been created in the workspace:
 | **`Backend/Dockerfile`** | Containerizes Python FastAPI service | Multi-stage slim build, ML dependencies (`xgboost`/`lightgbm`/etc.), standard-library-based health check, non-root security user (`appuser`). |
 | **`frontend/Dockerfile`** | Containerizes React/Vite web application | Multi-stage build (Node builder + Nginx runtime for production hosting). |
 | **`frontend/nginx.conf`** | Configures Nginx for Frontend serving | Implements **SPA routing** (redirects unmatched URLs to `index.html`), proxies `/api/` and `/downloads/` to the backend. |
-| **`docker-compose.yml`** | Configures local development | Hot-reloading via volume bind mounts (protecting container `node_modules` from local overrides), spins up MLflow dashboard. |
-| **`docker-compose.prod.yml`** | Configures production deployment | Relies on immutable tagged registry images, automatic restarts, and isolated secure networks. |
 | **`.dockerignore`** | Optimizes container builds | Prevents bloating containers with local virtual environments (`.venv`), node modules, logs, or sensitive `.env` credentials. |
-
----
-
-## 🚀 Running the App Locally (Development)
-
-To spin up the entire application stack locally with hot-reloading and tracking enabled:
-
-### 1. Build and Run
-Execute the following command from the root project directory:
-```bash
-docker compose up --build
-```
-
-### 2. Standard Service Endpoints
-Once the containers are up, access the applications at:
-* **Frontend Application**: `http://localhost:5173`
-* **FastAPI Docs (Swagger)**: `http://localhost:8000/docs`
-* **Health Check Status**: `http://localhost:8000/health`
-* **MLflow Tracking Dashboard**: `http://localhost:5000`
-
-### 3. Running Tests Inside the Container
-To run unit tests or lint checks in the containerized development environment:
-```bash
-docker exec -it ai_career_backend pytest -v
-```
 
 ---
 
@@ -73,12 +46,8 @@ In a production environment (such as GCP, AWS, or a custom VPS), images are buil
    docker build -t your-username/ai-career-companion/frontend:latest ./frontend
    ```
 
-2. **Deploying on Server**:
-   Place `docker-compose.prod.yml` on your server and start:
-   ```bash
-   docker compose -f docker-compose.prod.yml pull
-   docker compose -f docker-compose.prod.yml up -d
-   ```
+2. **Deploying on Server (e.g., Cloud Run)**:
+   For example, on Google Cloud Run, the backend container is built and run directly using the `Backend/Dockerfile`.
 
 > [!TIP]
 > **Why Multi-Stage Builds?**
