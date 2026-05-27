@@ -102,7 +102,7 @@ function App() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
               >
-                Upload any dataset. Our AI agent will analyze, clean, encode, and scale your data — producing ML-ready outputs with a full quality report in seconds.
+                Upload any dataset. Our autonomous AI agents will profile, clean, visualize, and analyze your data — generating interactive dashboards, semantic RAG chat, and full ML-driven Strategic Decision Reports in seconds.
               </motion.p>
 
               <motion.div
