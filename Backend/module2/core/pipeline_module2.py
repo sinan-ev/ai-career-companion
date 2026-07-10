@@ -203,7 +203,7 @@ def _print_summary(
     """
     sep = "=" * 50
     print(f"\n{sep}")
-    print("  MODULE 2 — PIPELINE COMPLETE")
+    print("  MODULE 2 - PIPELINE COMPLETE")
     print(sep)
     print(f"  Domain:          {response.dataset_info.get('domain', '?')}")
     print(f"  Quality grade:   {response.eda_report.quality_score.get('grade')} "

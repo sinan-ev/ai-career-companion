@@ -175,7 +175,7 @@ class PipelineMemory:
             else:
                 icon = "-"
 
-            detail = f" → {step.details}" if step.details else ""
+            detail = f" -> {step.details}" if step.details else ""
             lines.append(f"  {icon} {step.step:<25}{detail}")
 
         return "\n".join(lines)
