@@ -69,7 +69,7 @@ def run_module2(
     df_analytics_snapshot = df.copy(deep=True)
 
     # STEP 6 — EXECUTE THE PLAN
-
+#
     memory = Memory()
     df_processed, artifacts, pipeline_steps_log = execute_plan(
         df               = df,
