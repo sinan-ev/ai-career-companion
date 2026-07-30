@@ -128,4 +128,4 @@ ai-career-companion/
 
 ---
 
-*Developed by the Data Intelligence Team*
+*Developed by Muhammmed Sinan EV*
